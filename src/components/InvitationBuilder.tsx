@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import EditorPanel from './EditorPanel';
@@ -7,7 +8,6 @@ import Modal from './UI/Modal';
 import { Save, ArrowLeft, Check, Copy, Share2, Eye, Layout, Users } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import type { InvitationData } from '../types';
-import LZString from 'lz-string';
 import GuestManager from './GuestManager'; // Import GuestManager
 
 const InvitationBuilder: React.FC = () => {
@@ -42,7 +42,7 @@ const InvitationBuilder: React.FC = () => {
     // Cargar datos guardados al iniciar
     useEffect(() => {
         if (user?.username) {
-            const savedData = localStorage.getItem(`invitation_${user.username}`);
+            const savedData = localStorage.getItem(`invitation_${user.username} `);
             if (savedData) {
                 try {
                     const parsed = JSON.parse(savedData);
@@ -61,7 +61,7 @@ const InvitationBuilder: React.FC = () => {
 
     const saveData = () => {
         if (user?.username) {
-            localStorage.setItem(`invitation_${user.username}`, JSON.stringify(data));
+            localStorage.setItem(`invitation_${user.username} `, JSON.stringify(data));
             setIsSaved(true);
             setShowSaveModal(true);
             setTimeout(() => setShowSaveModal(false), 2000);
@@ -80,7 +80,7 @@ const InvitationBuilder: React.FC = () => {
             localStorage.setItem('preview_data', JSON.stringify(data));
 
             // Open preview with mode=preview flag
-            const url = `${window.location.origin}/invitacion?mode=preview`;
+            const url = `${window.location.origin} /invitacion?mode=preview`;
             const newWindow = window.open(url, '_blank');
 
             if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {

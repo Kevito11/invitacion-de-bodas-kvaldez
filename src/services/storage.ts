@@ -9,7 +9,6 @@ import { supabase } from '../supabaseClient';
 export const uploadImage = async (file: File, folderName: string = 'general'): Promise<string> => {
     try {
         // Sanitize file name
-        const fileExt = file.name.split('.').pop();
         // Create clean filename with timestamp to avoid collisions
         const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '')}`;
 
