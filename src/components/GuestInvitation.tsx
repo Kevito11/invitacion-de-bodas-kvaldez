@@ -134,7 +134,7 @@ const GuestInvitation: React.FC = () => {
                 transition: 'all 1.2s cubic-bezier(0.2, 0.8, 0.2, 1)',
                 height: '100%',
                 filter: isEnvelopeOpen ? 'blur(0)' : 'blur(10px)',
-                overflowY: isEnvelopeOpen ? 'auto' : 'hidden',
+                overflowY: 'hidden',
                 WebkitOverflowScrolling: 'touch'
             }}>
                 <InvitationPreview

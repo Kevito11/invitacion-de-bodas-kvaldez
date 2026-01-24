@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { MapPin, Calendar, Heart, ZoomIn, ZoomOut } from 'lucide-react';
 import type { InvitationData } from '../types';
 import CountdownTimer from './UI/CountdownTimer';
@@ -34,17 +34,12 @@ const getFontFamily = (font?: string) => {
 };
 
 
-const BackgroundSlideshow = ({ images, fallbackColor }: { images: string[], fallbackColor: string }) => {
-    const [index, setIndex] = useState(0);
 
-    // Auto-advance
-    React.useEffect(() => {
-        if (images.length <= 1) return;
-        const interval = setInterval(() => {
-            setIndex(prev => (prev + 1) % images.length);
-        }, 5000); // Change every 5 seconds
-        return () => clearInterval(interval);
-    }, [images.length]);
+const BackgroundSlideshow = ({ images, activeIndex, fallbackColor }: { images: string[], activeIndex: number, fallbackColor: string }) => {
+    // Determine which image to show based on active section index
+    // If we have fewer images than sections, we loop them or just cycle.
+    // Logic: section 0 -> img 0, section 1 -> img 1, etc.
+    // If images is empty, show fallback.
 
     if (images.length === 0) {
         return (
@@ -56,21 +51,23 @@ const BackgroundSlideshow = ({ images, fallbackColor }: { images: string[], fall
     }
 
     return (
-        <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 0, overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 0, overflow: 'hidden', backgroundColor: fallbackColor }}>
             {images.map((img, i) => (
-                <div
-                    key={img} // Use URL as key
-                    style={{
-                        position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+                <div key={img} style={{
+                    position: 'absolute', inset: 0,
+                    opacity: i === (activeIndex % images.length) ? 1 : 0,
+                    transition: 'opacity 1.2s ease-in-out'
+                }}>
+                    {/* Blurred Background Layer */}
+                    <div style={{
+                        position: 'absolute', inset: 0,
                         backgroundImage: `url(${img})`,
                         backgroundSize: 'cover',
                         backgroundPosition: 'center',
-                        filter: 'blur(6px) brightness(0.9)', // Added blur per request
-                        // transform: 'scale(1.1)', // Removed to prevent cropping
-                        opacity: i === index ? 1 : 0,
-                        transition: 'opacity 1.5s ease-in-out'
-                    }}
-                />
+                        filter: 'blur(12px) brightness(0.85)', // Difuminado solicitado
+                        transform: 'scale(1.1)' // Prevent blur edges
+                    }} />
+                </div>
             ))}
         </div>
     );
@@ -79,8 +76,15 @@ const BackgroundSlideshow = ({ images, fallbackColor }: { images: string[], fall
 const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, isGuest = false, guest }) => {
     const [scale, setScale] = useState(1);
     const containerRef = useRef<HTMLDivElement>(null);
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
 
+    // Section Observer State
+    const [activeSection, setActiveSection] = useState(0);
 
+    // Modal/Lightbox State
+    const [lightboxImg, setLightboxImg] = useState<string | null>(null);
+
+    // RSVP Modal State
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [confirmAction, setConfirmAction] = useState<'confirm' | 'reject' | null>(null);
     const [guestName, setGuestName] = useState('');
@@ -91,6 +95,32 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, isGuest = f
             setGuestName(guest.name);
         }
     }, [guest]);
+
+    // Intersection Observer for Sections
+    useEffect(() => {
+        const container = scrollContainerRef.current;
+        if (!container) return;
+
+        const sections = container.querySelectorAll('.snap-section');
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    // Find index of intersecting section
+                    const index = Array.from(sections).indexOf(entry.target);
+                    if (index !== -1) {
+                        setActiveSection(index);
+                    }
+                }
+            });
+        }, {
+            root: container,
+            threshold: 0.5 // Trigger when 50% visible
+        });
+
+        sections.forEach(s => observer.observe(s));
+        return () => observer.disconnect();
+    }, [data]); // Re-run if data changes re-renders sections
+
 
     // Determine primary color based on theme
     const themeColor = getThemeColor(data.theme);
@@ -119,19 +149,22 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, isGuest = f
         setGuestName('');
     };
 
+    const backgroundImages = [data.backgroundImageUrl, ...(data.backgroundImages || [])].filter(Boolean) as string[];
+
     return (
         <div className="preview-container" style={{
             width: '100%',
-            minHeight: '100%',
+            height: '100%',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            padding: '0', // Full width fit
+            padding: '0',
             justifyContent: 'flex-start',
-            boxSizing: 'border-box'
+            boxSizing: 'border-box',
+            overflow: 'hidden'
         }}>
             {!isGuest && (
-                <div className="preview-controls" style={{ margin: '1rem', display: 'flex', gap: '0.5rem', zIndex: 10 }}>
+                <div className="preview-controls" style={{ padding: '0.5rem', display: 'flex', gap: '0.5rem', zIndex: 10 }}>
                     <button onClick={handleZoomOut} title="Alejar" style={{ padding: '0.5rem', borderRadius: '4px', border: '1px solid #ddd', cursor: 'pointer', background: 'white' }}><ZoomOut size={16} /></button>
                     <button onClick={handleZoomIn} title="Acercar" style={{ padding: '0.5rem', borderRadius: '4px', border: '1px solid #ddd', cursor: 'pointer', background: 'white' }}><ZoomIn size={16} /></button>
                 </div>
@@ -144,7 +177,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, isGuest = f
                     transform: `scale(${scale})`,
                     transition: 'transform 0.3s ease',
                     width: '100%',
-                    height: '100vh', // Ensure container has height
+                    flex: 1,
                     backgroundColor: 'transparent',
                     boxShadow: isGuest ? 'none' : `0 20px 60px -10px ${themeColor}40`,
                     padding: '0',
@@ -152,26 +185,36 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, isGuest = f
                     position: 'relative',
                     borderRadius: isGuest ? '0' : '8px',
                     border: isGuest ? 'none' : `1px solid ${themeColor}20`,
-                    overflow: 'hidden' // Clip corners
+                    overflow: 'hidden',
+                    display: 'flex',
+                    flexDirection: 'column'
                 }}
             >
-                {/* Fixed Background Layer (Sibing to Scroll Container) */}
-                {/* Fixed Background Layer (Sibing to Scroll Container) */}
+                {/* Scroll-Synced Blurred Background */}
                 <BackgroundSlideshow
-                    images={[data.backgroundImageUrl, ...(data.backgroundImages || [])].filter(Boolean) as string[]}
+                    images={backgroundImages}
+                    activeIndex={activeSection}
                     fallbackColor={themeColor}
                 />
 
-                {/* Scroll Container (The actual scrolling content) */}
-                <div className="snap-container" style={{ position: 'relative', zIndex: 1, height: '100%', overflowY: 'auto' }}>
-                    {/* Decorative Border (Fixed Frame) */}
+                {/* Scroll Container */}
+                <div
+                    ref={scrollContainerRef}
+                    className="snap-container"
+                    style={{
+                        position: 'absolute',
+                        inset: 0,
+                        zIndex: 1,
+                        overflowY: 'scroll',
+                        scrollSnapType: 'y mandatory',
+                        scrollBehavior: 'auto'
+                    }}
+                >
+                    {/* Decorative Border */}
                     {!data.imageUrl && (
                         <div style={{
                             position: 'fixed',
-                            top: '15px',
-                            left: '15px',
-                            right: '15px',
-                            bottom: '15px',
+                            top: '15px', left: '15px', right: '15px', bottom: '15px',
                             border: `1px solid ${themeColor}`,
                             pointerEvents: 'none',
                             opacity: 0.5,
@@ -235,7 +278,8 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, isGuest = f
                                     margin: '1rem 0',
                                     lineHeight: '1.2',
                                     fontFamily: titleFont,
-                                    wordBreak: 'break-word'
+                                    wordBreak: 'break-word',
+                                    textShadow: '0 2px 4px rgba(255,255,255,0.5)'
                                 }}>
                                     <span style={{ display: 'block' }}>{data.partner1 || 'Ana'}</span>
                                     <span style={{ fontSize: '1.5rem', fontStyle: 'italic', color: themeColor, margin: '0.5rem 0', display: 'block', transition: 'color 0.3s ease', fontFamily: "'Playfair Display', serif" }}>&</span>
@@ -253,7 +297,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, isGuest = f
                     <section className="snap-section">
                         <div style={{ width: '100%', padding: '0 1rem' }}>
                             <ScrollReveal>
-                                <div style={{ marginBottom: '2rem' }}>
+                                <div style={{ marginBottom: '2rem', background: 'rgba(255,255,255,0.8)', padding: '1.5rem', borderRadius: '16px', backdropFilter: 'blur(5px)' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
                                         <Calendar size={20} color={themeColor} />
                                         <p style={{ fontSize: '1.3rem', margin: 0, color: '#444', fontWeight: 500 }}>{formatDate(data.date)}</p>
@@ -284,7 +328,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, isGuest = f
                             </ScrollReveal>
 
                             <ScrollReveal>
-                                <div style={{ padding: '2rem 0', borderTop: `1px solid ${themeColor}40`, borderBottom: `1px solid ${themeColor}40` }}>
+                                <div style={{ padding: '2rem 1rem', background: 'rgba(255,255,255,0.8)', borderRadius: '16px', backdropFilter: 'blur(5px)' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
                                         <MapPin size={20} color={themeColor} />
                                         <a
@@ -329,7 +373,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, isGuest = f
                     <section className="snap-section">
                         <div style={{ width: '100%', padding: '0 1rem' }}>
                             <ScrollReveal>
-                                <div style={{ marginBottom: '3rem' }}>
+                                <div style={{ marginBottom: '3rem', background: 'rgba(255,255,255,0.8)', padding: '2rem', borderRadius: '16px' }}>
                                     <p style={{ fontSize: '0.9rem', color: '#888', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '0.5rem' }}>Código de Vestimenta</p>
                                     <p style={{ fontSize: '1.4rem', color: themeColor, fontWeight: 500, fontFamily: titleFont }}>{data.dressCode || 'Formal'}</p>
 
@@ -345,16 +389,20 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, isGuest = f
                                                 data.dressCodeInspirationUrl.match(/\.(jpeg|jpg|gif|png|webp)/i) ||
                                                 data.dressCodeInspirationUrl.includes('googleusercontent')) ? (
                                                 <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
-                                                    <div style={{
-                                                        width: '140px', height: '140px', borderRadius: '12px', overflow: 'hidden',
-                                                        boxShadow: '0 8px 20px rgba(0,0,0,0.1)'
-                                                    }}>
+                                                    <div
+                                                        onClick={() => setLightboxImg(data.dressCodeInspirationUrl || '')}
+                                                        style={{
+                                                            width: '140px', height: '140px', borderRadius: '12px', overflow: 'hidden',
+                                                            boxShadow: '0 8px 20px rgba(0,0,0,0.1)', cursor: 'zoom-in'
+                                                        }}
+                                                    >
                                                         <img
                                                             src={data.dressCodeInspirationUrl}
                                                             alt="Ejemplo"
                                                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                                         />
                                                     </div>
+                                                    <span style={{ fontSize: '0.8rem', color: '#666' }}>Ver ejemplo</span>
                                                 </div>
                                             ) : (
                                                 <a
@@ -383,7 +431,8 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, isGuest = f
                                     color: '#555',
                                     maxWidth: '90%',
                                     margin: '0 auto',
-                                    whiteSpace: 'pre-line'
+                                    whiteSpace: 'pre-line',
+                                    textShadow: '0 1px 10px rgba(255,255,255,0.8)'
                                 }}>
                                     "{data.message || 'Esperamos contar con tu presencia en este día tan especial para nosotros.'}"
                                 </p>
@@ -391,9 +440,9 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, isGuest = f
                         </div>
                     </section>
 
-                    {/* SECTION 4: GALLERY & RSVP */}
+                    {/* SECTION 4: GALLERY (Horizontal Carousel) & RSVP */}
                     <section className="snap-section">
-                        <div style={{ width: '100%', padding: '0 1rem' }}>
+                        <div style={{ width: '100%', padding: '0 1rem', overflowX: 'hidden' }}>
                             {data.gallery && data.gallery.length > 0 && (
                                 <div style={{ marginBottom: '3rem' }}>
                                     <ScrollReveal>
@@ -401,36 +450,54 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, isGuest = f
                                             fontFamily: titleFont, fontSize: '2rem', color: themeColor, marginBottom: '2rem'
                                         }}>Nuestros Momentos</h3>
                                     </ScrollReveal>
+
+                                    {/* Carousel Container */}
                                     <div style={{
                                         display: 'flex',
-                                        justifyContent: 'center',
+                                        overflowX: 'auto',
                                         gap: '1rem',
-                                        flexWrap: 'wrap'
+                                        padding: '1rem 0.5rem 2rem 0.5rem',
+                                        scrollSnapType: 'x mandatory',
+                                        WebkitOverflowScrolling: 'touch',
+                                        scrollbarWidth: 'none', // Hide scrollbar FF
+                                        msOverflowStyle: 'none'  // Hide scrollbar IE
                                     }}>
-                                        {data.gallery.slice(0, 4).map((img, i) => (
-                                            <ScrollReveal key={i}>
-                                                <div style={{
-                                                    width: '140px',
-                                                    height: '140px',
-                                                    borderRadius: '8px',
-                                                    boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
-                                                    overflow: 'hidden'
-                                                }}>
-                                                    <img
-                                                        src={img}
-                                                        alt={`Gallery ${i}`}
-                                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                                    />
-                                                </div>
-                                            </ScrollReveal>
+                                        {/* CSS to hide scrollbar Chrome/Safari */}
+                                        <style>{`
+                                            .snap-section ::-webkit-scrollbar { display: none; }
+                                        `}</style>
+
+                                        {data.gallery.map((img, i) => (
+                                            <div key={i} style={{
+                                                flex: '0 0 auto',
+                                                scrollSnapAlign: 'center',
+                                                width: '280px',
+                                                height: '380px', // Portrait orientation
+                                                borderRadius: '12px',
+                                                boxShadow: '0 8px 25px rgba(0,0,0,0.15)',
+                                                overflow: 'hidden',
+                                                cursor: 'zoom-in',
+                                                transition: 'transform 0.3s ease',
+                                                position: 'relative'
+                                            }}
+                                                onClick={() => setLightboxImg(img)}
+                                                className="gallery-item"
+                                            >
+                                                <img
+                                                    src={img}
+                                                    alt={`Momentos ${i}`}
+                                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                />
+                                            </div>
                                         ))}
                                     </div>
+                                    <p style={{ textAlign: 'center', fontSize: '0.8rem', color: '#888', marginTop: '-1rem' }}>Desliza para ver más →</p>
                                 </div>
                             )}
 
                             {data.whatsappNumber && (
                                 <ScrollReveal>
-                                    <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                                    <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap', paddingBottom: '3rem' }}>
                                         <button
                                             onClick={() => { setConfirmAction('confirm'); setShowConfirmModal(true); }}
                                             style={{
@@ -456,7 +523,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, isGuest = f
                                                 display: 'inline-flex',
                                                 alignItems: 'center',
                                                 gap: '0.5rem',
-                                                backgroundColor: 'transparent',
+                                                backgroundColor: 'rgba(255,255,255,0.8)',
                                                 color: '#666',
                                                 padding: '1rem 2rem',
                                                 borderRadius: '50px',
@@ -554,6 +621,35 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, isGuest = f
                         </div>
                     )
                 }
+
+                {/* Lightbox / Modal for Gallery */}
+                {lightboxImg && (
+                    <div
+                        onClick={() => setLightboxImg(null)}
+                        style={{
+                            position: 'fixed', inset: 0, zIndex: 2000,
+                            backgroundColor: 'rgba(0,0,0,0.9)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            backdropFilter: 'blur(10px)',
+                            cursor: 'zoom-out'
+                        }}
+                    >
+                        <button
+                            onClick={() => setLightboxImg(null)}
+                            style={{
+                                position: 'absolute', top: '20px', right: '20px',
+                                background: 'transparent', border: 'none', color: '#fff', fontSize: '2rem', cursor: 'pointer'
+                            }}
+                        >
+                            &times;
+                        </button>
+                        <img
+                            src={lightboxImg}
+                            alt="Full size"
+                            style={{ maxWidth: '95%', maxHeight: '90vh', borderRadius: '4px', boxShadow: '0 0 50px rgba(0,0,0,0.5)' }}
+                        />
+                    </div>
+                )}
             </div>
         </div>
     );

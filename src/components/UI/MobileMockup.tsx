@@ -8,8 +8,8 @@ interface MobileMockupProps {
 const MobileMockup: React.FC<MobileMockupProps> = ({ children, scale = 1 }) => {
     return (
         <div style={{
-            width: '300px',
-            height: '600px',
+            width: '360px',
+            height: '740px',
             backgroundColor: '#fff',
             borderRadius: '35px',
             boxShadow: '0 20px 50px rgba(0,0,0,0.15), 0 0 0 8px #2d2a26 inset',
@@ -38,9 +38,7 @@ const MobileMockup: React.FC<MobileMockupProps> = ({ children, scale = 1 }) => {
             <div style={{
                 width: '100%',
                 height: '100%',
-                overflowY: 'auto',
-                overflowX: 'hidden',
-                scrollbarWidth: 'none', // Hide scrollbar for Firefox
+                overflowY: 'hidden',
                 msOverflowStyle: 'none'  // Hide scrollbar for IE/Edge
             }}>
                 {children}

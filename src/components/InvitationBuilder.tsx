@@ -357,7 +357,7 @@ const InvitationBuilder: React.FC = () => {
                     backgroundImage: 'radial-gradient(#e5e7eb 1px, transparent 1px)',
                     backgroundSize: '20px 20px'
                 }}>
-                    <MobileMockup scale={0.9}>
+                    <MobileMockup scale={0.85}>
                         <InvitationPreview data={data} />
                     </MobileMockup>
                 </div>
