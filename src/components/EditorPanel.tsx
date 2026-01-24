@@ -116,9 +116,14 @@ const EditorPanel: React.FC<EditorPanelProps> = ({ data, onChange }) => {
                                         try {
                                             const newUrls: string[] = [];
                                             for (const file of files) {
+                                                // Generate folder name: Ana_and_Carlos
+                                                const p1 = data.partner1.replace(/[^a-zA-Z0-9]/g, '') || 'Pareja1';
+                                                const p2 = data.partner2.replace(/[^a-zA-Z0-9]/g, '') || 'Pareja2';
+                                                const folderName = `${p1}_y_${p2}`;
+
                                                 // Import dynamically to avoid circular dependencies if any
                                                 const { uploadImage } = await import('../services/storage');
-                                                const url = await uploadImage(file);
+                                                const url = await uploadImage(file, folderName);
                                                 newUrls.push(url);
                                             }
                                             onChange('mediaLibrary', [...(data.mediaLibrary || []), ...newUrls] as any);

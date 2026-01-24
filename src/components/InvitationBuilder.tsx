@@ -74,55 +74,6 @@ const InvitationBuilder: React.FC = () => {
 
 
 
-    const getInvitationUrl = () => {
-        try {
-            // Minify data to reduce URL length
-            // Map long keys to short keys: 
-            // p1:partner1, p2:partner2, d:date, t:time, v:venueName, a:venueAddress
-            // m:message, th:theme, f:font, i:imageUrl, au:audioUrl, w:whatsappNumber, g:gallery, bi:backgroundImageUrl
-            // ml: mediaLibrary
-
-            const minified = {
-                p1: data.partner1,
-                p2: data.partner2,
-                d: data.date,
-                t: data.time,
-                v: data.venueName,
-                a: data.venueAddress,
-                m: data.message,
-                th: data.theme,
-                f: data.font,
-                // Only include optional fields if they exist to save space
-                ...(data.imageUrl ? { i: data.imageUrl } : {}),
-                ...(data.backgroundImageUrl ? { bi: data.backgroundImageUrl } : {}),
-                ...(data.backgroundImages && data.backgroundImages.length > 0 ? { bgi: data.backgroundImages } : {}),
-                ...(data.audioUrl ? { au: data.audioUrl } : {}),
-                ...(data.whatsappNumber ? { w: data.whatsappNumber } : {}),
-                ...(data.mapUrl ? { mu: data.mapUrl } : {}),
-                ...(data.gallery && data.gallery.length > 0 ? { g: data.gallery } : {}),
-                ...(data.dressCode ? { dc: data.dressCode } : {}),
-                ...(data.dressCodeDetails ? { dcd: data.dressCodeDetails } : {}),
-                ...(data.dressCodeInspirationUrl ? { dci: data.dressCodeInspirationUrl } : {}),
-                ...(data.mediaLibrary && data.mediaLibrary.length > 0 ? { ml: data.mediaLibrary } : {}),
-                // Include guests list (minified) to allow identification
-                ...(data.guests && data.guests.length > 0 ? {
-                    gs: data.guests.map(g => ({
-                        i: g.id,
-                        n: g.name,
-                        s: g.status,
-                        t: g.tickets
-                    }))
-                } : {})
-            };
-
-            const compressed = LZString.compressToEncodedURIComponent(JSON.stringify(minified));
-            return `${window.location.origin}/invitacion?data=${compressed}`;
-        } catch (e) {
-            console.error("Compression error", e);
-            return null;
-        }
-    };
-
     const handlePreview = () => {
         try {
             // Save current data to localStorage for preview
@@ -143,11 +94,17 @@ const InvitationBuilder: React.FC = () => {
 
     const handleShare = async () => {
         try {
-            const url = getInvitationUrl();
-            if (!url) {
-                alert("No se pudo generar el enlace. Intenta de nuevo.");
+            // Save to Database and get ID
+            const { saveInvitationToDb } = await import('../services/database');
+            const id = await saveInvitationToDb(data);
+
+            if (!id) {
+                alert("No se pudo guardar la invitación. Intenta de nuevo.");
                 return;
             }
+
+            // Generate Short URL
+            const url = `${window.location.origin}/invitacion?id=${id}`;
 
             // Real world URL limits
             const WARNING_LIMIT = 4000; // ~4KB
@@ -339,7 +296,7 @@ const InvitationBuilder: React.FC = () => {
                                     setData(prev => ({ ...prev, guests: newGuests }));
                                     setIsSaved(false);
                                 }}
-                                invitationUrl={getInvitationUrl() || ''}
+                                invitationUrl={''}
                                 mode="design"
                             />
                         )}
