@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import type { Guest, RSVPStatus } from '../types';
-import { Download, Upload, Trash2, Search, MessageCircle, Plus, Link as LinkIcon, CheckCircle, ArrowRight } from 'lucide-react';
+import { Download, Upload, Trash2, Search, MessageCircle, Plus, Link as LinkIcon, CheckCircle, ArrowRight, Users } from 'lucide-react';
 
 interface GuestManagerProps {
     guests: Guest[];
@@ -40,6 +40,12 @@ const GuestManager: React.FC<GuestManagerProps> = ({ guests, onUpdateGuests, inv
         setStats(newStats);
     }, [guests]);
 
+    const [isAddingFamily, setIsAddingFamily] = useState(false);
+    const [newFamily, setNewFamily] = useState<{ name: string, members: Partial<Guest>[] }>({
+        name: '',
+        members: [{ name: '', status: 'pending', tickets: 1 }]
+    });
+
     const handleAddGuest = () => {
         if (!newGuest.name) return alert("El nombre es obligatorio");
 
@@ -56,6 +62,27 @@ const GuestManager: React.FC<GuestManagerProps> = ({ guests, onUpdateGuests, inv
         onUpdateGuests([...guests, guest]);
         setNewGuest({ name: '', email: '', phone: '', tickets: 1, status: 'pending' });
         setIsAdding(false);
+    };
+
+    const handleSaveFamily = () => {
+        if (!newFamily.name) return alert("El nombre de la familia es obligatorio");
+        if (newFamily.members.some(m => !m.name)) return alert("Todos los miembros deben tener nombre");
+
+        const familyId = `family_${Date.now()}`;
+        const newGuests: Guest[] = newFamily.members.map((member, idx) => ({
+            id: `${familyId}_${idx}`, // Unique ID
+            name: member.name || '',
+            email: '',
+            phone: '',
+            tickets: 1,
+            status: 'pending',
+            notes: '',
+            groupId: familyId
+        }));
+
+        onUpdateGuests([...guests, ...newGuests]);
+        setNewFamily({ name: '', members: [{ name: '', status: 'pending', tickets: 1 }] });
+        setIsAddingFamily(false);
     };
 
     const handleDeleteGuest = (id: string) => {
@@ -211,7 +238,10 @@ const GuestManager: React.FC<GuestManagerProps> = ({ guests, onUpdateGuests, inv
                             </button>
 
                             <button onClick={() => setIsAdding(!isAdding)} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', backgroundColor: '#111827', color: 'white', borderRadius: '6px', border: 'none', cursor: 'pointer' }}>
-                                <Plus size={16} /> Agregar
+                                <Plus size={16} /> Persona
+                            </button>
+                            <button onClick={() => setIsAddingFamily(!isAddingFamily)} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', backgroundColor: '#2563EB', color: 'white', borderRadius: '6px', border: 'none', cursor: 'pointer' }}>
+                                <Users size={16} /> Familia
                             </button>
                             <button onClick={() => fileInputRef.current?.click()} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', backgroundColor: '#fff', color: '#374151', borderRadius: '6px', border: '1px solid #E5E7EB', cursor: 'pointer' }}>
                                 <Upload size={16} /> Importar
@@ -245,6 +275,64 @@ const GuestManager: React.FC<GuestManagerProps> = ({ guests, onUpdateGuests, inv
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
                         <button onClick={() => setIsAdding(false)} style={{ padding: '0.5rem 1rem', border: 'none', background: 'transparent', cursor: 'pointer', color: '#6B7280' }}>Cancelar</button>
                         <button onClick={handleAddGuest} style={{ padding: '0.5rem 1.5rem', border: 'none', background: '#4F46E5', color: 'white', borderRadius: '4px', cursor: 'pointer' }}>Guardar</button>
+                    </div>
+                </div>
+            )}
+
+            {/* Add Family Form */}
+            {isAddingFamily && (
+                <div style={{ marginBottom: '2rem', padding: '1.5rem', backgroundColor: '#EFF6FF', borderRadius: '8px', border: '1px dashed #93C5FD' }}>
+                    <h4 style={{ margin: '0 0 1rem', fontSize: '1rem', fontWeight: 600, color: '#1E40AF' }}>Nueva Familia / Grupo</h4>
+
+                    <div style={{ marginBottom: '1rem' }}>
+                        <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '0.4rem', color: '#1E40AF' }}>Nombre de la Familia (ej: Familia Pérez)</label>
+                        <input
+                            type="text"
+                            placeholder="Familia Pérez"
+                            value={newFamily.name}
+                            onChange={e => setNewFamily({ ...newFamily, name: e.target.value })}
+                            style={{ width: '100%', padding: '0.6rem', borderRadius: '4px', border: '1px solid #BFDBFE' }}
+                        />
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1rem' }}>
+                        <label style={{ fontSize: '0.9rem', color: '#1E40AF' }}>Miembros:</label>
+                        {newFamily.members.map((member, idx) => (
+                            <div key={idx} style={{ display: 'flex', gap: '0.5rem' }}>
+                                <input
+                                    type="text"
+                                    placeholder={`Miembro ${idx + 1}`}
+                                    value={member.name}
+                                    onChange={e => {
+                                        const updated = [...newFamily.members];
+                                        updated[idx].name = e.target.value;
+                                        setNewFamily({ ...newFamily, members: updated });
+                                    }}
+                                    style={{ flex: 1, padding: '0.6rem', borderRadius: '4px', border: '1px solid #BFDBFE' }}
+                                />
+                                <button
+                                    onClick={() => {
+                                        const updated = newFamily.members.filter((_, i) => i !== idx);
+                                        setNewFamily({ ...newFamily, members: updated });
+                                    }}
+                                    title="Quitar"
+                                    style={{ padding: '0 0.8rem', background: '#FEE2E2', border: '1px solid #FECACA', color: '#DC2626', borderRadius: '4px', cursor: 'pointer' }}
+                                >
+                                    &times;
+                                </button>
+                            </div>
+                        ))}
+                        <button
+                            onClick={() => setNewFamily({ ...newFamily, members: [...newFamily.members, { name: '', status: 'pending', tickets: 1 }] })}
+                            style={{ alignSelf: 'flex-start', background: 'transparent', border: 'none', color: '#2563EB', cursor: 'pointer', fontSize: '0.9rem', padding: '0.5rem 0' }}
+                        >
+                            + Agregar otro miembro
+                        </button>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                        <button onClick={() => setIsAddingFamily(false)} style={{ padding: '0.5rem 1rem', border: 'none', background: 'transparent', cursor: 'pointer', color: '#6B7280' }}>Cancelar</button>
+                        <button onClick={handleSaveFamily} style={{ padding: '0.5rem 1.5rem', border: 'none', background: '#2563EB', color: 'white', borderRadius: '4px', cursor: 'pointer' }}>Guardar Familia</button>
                     </div>
                 </div>
             )}

@@ -1,4 +1,5 @@
 export interface InvitationData {
+    id?: string;
     partner1: string;
     partner2: string;
     date: string;
@@ -32,4 +33,5 @@ export interface Guest {
     status: RSVPStatus;
     tickets: number; // Number of people allowed/confirmed
     notes?: string;
+    groupId?: string; // ID linking family members
 }

@@ -579,43 +579,111 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, isGuest = f
                                     }
                                 </p>
 
-                                {!guest && (
-                                    <input
-                                        type="text"
-                                        autoFocus
-                                        placeholder="Ej: Juan Pérez y María González"
-                                        value={guestName}
-                                        onChange={(e) => setGuestName(e.target.value)}
-                                        onKeyDown={(e) => e.key === 'Enter' && handleConfirmation()}
-                                        style={{
-                                            width: '100%',
-                                            padding: '1rem',
-                                            border: '1px solid #ddd',
-                                            borderRadius: '8px',
-                                            fontSize: '1rem',
-                                            marginBottom: '1.5rem',
-                                            outline: 'none'
-                                        }}
-                                    />
+                                {guest && guest.groupId && data.guests?.some((g: any) => g.groupId === guest.groupId && g.id !== guest.id) ? (
+                                    // GROUP / FAMILY MODE
+                                    <div style={{ textAlign: 'left', marginBottom: '1.5rem' }}>
+                                        <p style={{ marginBottom: '1rem', fontWeight: 600, color: '#444' }}>Selecciona quiénes asistirán:</p>
+                                        {data.guests
+                                            .filter((g: any) => g.groupId === guest.groupId)
+                                            .map((member: any) => (
+                                                <div key={member.id} style={{ display: 'flex', alignItems: 'center', marginBottom: '0.8rem', padding: '0.5rem', borderRadius: '6px', background: '#F9FAFB' }}>
+                                                    <input
+                                                        type="checkbox"
+                                                        id={`rsvp-${member.id}`}
+                                                        defaultChecked={confirmAction === 'confirm'}
+                                                        className="rsvp-checkbox" // We'll need to grab these values or control state
+                                                        style={{ width: '1.2rem', height: '1.2rem', marginRight: '0.8rem', cursor: 'pointer', accentColor: '#2D2A26' }}
+                                                    />
+                                                    <label htmlFor={`rsvp-${member.id}`} style={{ cursor: 'pointer', flex: 1, color: '#333' }}>
+                                                        {member.name}
+                                                    </label>
+                                                </div>
+                                            ))
+                                        }
+                                        <p style={{ fontSize: '0.85rem', color: '#666', marginTop: '1rem', fontStyle: 'italic' }}>
+                                            * Se generará un mensaje de WhatsApp con la lista de asistentes seleccionados.
+                                        </p>
+                                    </div>
+                                ) : (
+                                    // SINGLE GUEST MODE (Legacy)
+                                    !guest && (
+                                        <input
+                                            type="text"
+                                            autoFocus
+                                            placeholder="Ej: Juan Pérez y María González"
+                                            value={guestName}
+                                            onChange={(e) => setGuestName(e.target.value)}
+                                            onKeyDown={(e) => e.key === 'Enter' && handleConfirmation()}
+                                            style={{
+                                                width: '100%',
+                                                padding: '1rem',
+                                                border: '1px solid #ddd',
+                                                borderRadius: '8px',
+                                                fontSize: '1rem',
+                                                marginBottom: '1.5rem',
+                                                outline: 'none'
+                                            }}
+                                        />
+                                    )
                                 )}
 
                                 <button
-                                    onClick={handleConfirmation}
-                                    disabled={!guestName.trim()}
+                                    onClick={() => {
+                                        // Custom logic for Group RSVP
+                                        if (guest && guest.groupId) {
+                                            const checkboxes = document.querySelectorAll('.rsvp-checkbox') as NodeListOf<HTMLInputElement>;
+                                            const familyMembers = data.guests.filter((g: any) => g.groupId === guest.groupId);
+
+                                            const attending: string[] = [];
+                                            const notAttending: string[] = [];
+
+                                            checkboxes.forEach((cb, index) => {
+                                                const memberName = familyMembers[index].name;
+                                                if (cb.checked) attending.push(memberName);
+                                                else notAttending.push(memberName);
+                                            });
+
+                                            if (attending.length === 0 && confirmAction === 'confirm') {
+                                                if (!window.confirm("¿Seguro que nadie asistirá?")) return;
+                                            }
+
+                                            let message = "";
+                                            if (attending.length > 0) {
+                                                message = `Hola! Somos la *${guest.name.includes('Familia') ? guest.name : 'Familia de ' + guest.name}*. \n\n✅ *Confirmamos asistencia:* \n${attending.map(n => `- ${n}`).join('\n')}`;
+                                                if (notAttending.length > 0) {
+                                                    message += `\n\n❌ *No podrán asistir:* \n${notAttending.map(n => `- ${n}`).join('\n')}`;
+                                                }
+                                            } else {
+                                                message = `Hola! Somos la *${guest.name}*.\nLamentablemente no podremos asistir. 😔\nLes deseamos lo mejor.`;
+                                            }
+
+                                            // Append generic good vibes
+                                            message += `\n\n¡Gracias por la invitación! 🎉`;
+
+                                            const url = `https://wa.me/${data.whatsappNumber}?text=${encodeURIComponent(message)}`;
+                                            window.open(url, '_blank');
+                                            setShowConfirmModal(false);
+                                            return;
+                                        }
+
+                                        // Default Logic
+                                        handleConfirmation();
+                                    }}
+                                    disabled={!guest && !guestName.trim()}
                                     style={{
                                         width: '100%',
                                         padding: '1rem',
-                                        backgroundColor: !guestName.trim() ? '#ccc' : (confirmAction === 'confirm' ? '#2D2A26' : '#E53935'),
+                                        backgroundColor: (!guest && !guestName.trim()) ? '#ccc' : (confirmAction === 'confirm' ? '#2D2A26' : '#E53935'),
                                         color: 'white',
                                         border: 'none',
                                         borderRadius: '8px',
                                         fontWeight: 600,
                                         fontSize: '1rem',
-                                        cursor: !guestName.trim() ? 'not-allowed' : 'pointer',
+                                        cursor: (!guest && !guestName.trim()) ? 'not-allowed' : 'pointer',
                                         transition: 'all 0.2s'
                                     }}
                                 >
-                                    {confirmAction === 'confirm' ? 'SÍ, CONFIRMAR' : 'ENVIAR AVISO'}
+                                    {confirmAction === 'confirm' ? 'ENVIAR CONFIRMACIÓN' : 'ENVIAR AVISO'}
                                 </button>
                             </div>
                         </div>

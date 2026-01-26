@@ -2,20 +2,161 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
-    Send, Smartphone, ArrowRight, Heart, CheckCircle,
-    MapPin, Calendar, Clock, Music, Gift, Image,
-    ChevronDown, ChevronUp, Layout, Palette, User, LogOut
+    ArrowRight, CheckCircle,
+    Layout, Palette, User, ChevronDown, ChevronUp, Star, Heart, Smartphone, Globe, Moon, Sun
 } from 'lucide-react';
-import invitationPreviewValues from '../assets/invitation_preview.png';
+import heroCouple from '../assets/hero_bw_couple.jpg';
+import heroHands from '../assets/hero_bw_hands.png';
 import LoginModal from './LoginModal';
+
+// Translations
+const translations = {
+    es: {
+        nav: {
+            login: "Iniciar Sesión",
+            panel: "Mi Panel",
+            start: "Empezar Gratis"
+        },
+        hero: {
+            title1: "Tu historia de amor",
+            title2: "merece lo mejor.",
+            subtitle: "Invitaciones digitales elegantes que capturan tu esencia. Olvida el papel, simplifica el RSVP e impresiona a tus invitados.",
+            cta: "Crear Invitación",
+            stats: "Más de 10,000 bodas organizadas"
+        },
+        trusted: "Características Premium Incluidas",
+        process: {
+            title: "¿Cómo funciona?",
+            subtitle: "FÁCIL Y RÁPIDO",
+            steps: [
+                { title: "Elige tu Diseño", desc: "Comienza con una de nuestras plantillas premium y personalízala a tu gusto." },
+                { title: "Agrega Detalles", desc: "Sube tus fotos, historia de amor, itinerario y mesa de regalos." },
+                { title: "Comparte", desc: "Obtén un enlace único y envíalo por WhatsApp a todos tus invitados." }
+            ]
+        },
+        features: {
+            f1: {
+                title: "Diseños de Clase Mundial",
+                desc: "Nuestras plantillas no son solo imágenes; son experiencias interactivas. Elige entre estilos clásicos, bohemios o modernos.",
+                items: ['Tipografías elegantes', 'Animaciones suaves', 'Música de fondo']
+            },
+            f2: {
+                title: "Gestión en tu Bolsillo",
+                desc: "Mira quién ha confirmado, organiza las mesas y gestiona restricciones alimentarias desde tu celular.",
+                items: ['Confirmaciones WhatsApp', 'Estadísticas en vivo', 'Exportación a Excel']
+            }
+        },
+        showcase: {
+            title: "Encuentra tu estilo",
+            subtitle: "Explora nuestra colección curada por diseñadores.",
+            cta: "Ver Todo el Catálogo"
+        },
+        testimonial: {
+            text: "\"Hizo que organizar nuestra boda fuera increíblemente fácil. A nuestros invitados les encantó la experiencia digital y nosotros ahorramos mucho tiempo.\"",
+            author: "– SOFÍA Y MATEO"
+        },
+        faq: {
+            title: "Preguntas Frecuentes",
+            items: [
+                { q: "¿Cómo envío las invitaciones?", a: "Es muy fácil. Una vez creada, obtendrás un enlace único (link) que puedes compartir por WhatsApp, Email o redes sociales." },
+                { q: "¿Tengo que pagar antes de diseñar?", a: "¡No! Puedes diseñar tu invitación totalmente gratis. Solo pagas si decides publicarla para enviarla a tus invitados." }
+            ]
+        },
+        footer: {
+            links: ['Términos', 'Privacidad', 'Contacto', 'Blog'],
+            rights: "Todos los derechos reservados."
+        }
+    },
+    en: {
+        nav: {
+            login: "Log In",
+            panel: "My Dashboard",
+            start: "Start for Free"
+        },
+        hero: {
+            title1: "Your love story",
+            title2: "deserves the best.",
+            subtitle: "Elegant digital invitations that capture your essence. Forget paper, simplify RSVPs, and impress your guests.",
+            cta: "Create Invitation",
+            stats: "Over 10,000 weddings planned"
+        },
+        trusted: "Premium Features Included",
+        process: {
+            title: "How it works?",
+            subtitle: "QUICK & EASY",
+            steps: [
+                { title: "Choose your Design", desc: "Start with one of our premium templates and customize it to your taste." },
+                { title: "Add Details", desc: "Upload your photos, love story, itinerary, and registry." },
+                { title: "Share", desc: "Get a unique link and send it via WhatsApp to all your guests." }
+            ]
+        },
+        features: {
+            f1: {
+                title: "World Class Designs",
+                desc: "Our templates are not just images; they are interactive experiences. Choose from classic, bohemian, or modern styles.",
+                items: ['Elegant Typography', 'Smooth Animations', 'Background Music']
+            },
+            f2: {
+                title: "Management in your Pocket",
+                desc: "See who RSVP'd, organize tables, and manage dietary restrictions right from your phone.",
+                items: ['WhatsApp RSVPs', 'Live Statistics', 'Excel Export']
+            }
+        },
+        showcase: {
+            title: "Find your style",
+            subtitle: "Explore our collection curated by designers.",
+            cta: "View Full Catalog"
+        },
+        testimonial: {
+            text: "\"It made organizing our wedding incredibly easy. Our guests loved the digital experience and we saved so much time.\"",
+            author: "– SOPHIA & MATTHEW"
+        },
+        faq: {
+            title: "Frequently Asked Questions",
+            items: [
+                { q: "How do I send the invitations?", a: "It's very easy. Once created, you get a unique link that you can share via WhatsApp, Email, or social media." },
+                { q: "Do I have to pay before designing?", a: "No! You can design your invitation completely for free. You only pay if you decide to publish it to send to your guests." }
+            ]
+        },
+        footer: {
+            links: ['Terms', 'Privacy', 'Contact', 'Blog'],
+            rights: "All rights reserved."
+        }
+    }
+};
 
 const LandingPage: React.FC = () => {
     const location = useLocation();
     const navigate = useNavigate();
-    const { user, logout } = useAuth();
+    const { user } = useAuth();
     const [scrolled, setScrolled] = useState(false);
     const [showLoginModal, setShowLoginModal] = useState(false);
     const [openFaq, setOpenFaq] = useState<number | null>(null);
+    const [activeHeroImage, setActiveHeroImage] = useState(0);
+    const [lang, setLang] = useState<'es' | 'en'>('es');
+    const [darkMode, setDarkMode] = useState(false);
+
+    const t = translations[lang];
+    const heroImages = [heroCouple, heroHands];
+
+    // Colors - Dynamic Palette
+    const colors = darkMode ? {
+        primary: "#E6BEAE", // Dusty Blush (Same)
+        secondary: "#B5C99A", // Sage Green (Same)
+        dark: "#F3F4F6", // Text is Light Gray
+        light: "#111827", // Background is Dark Charcoal
+        white: "#1F2937", // Card Background is slightly lighter dark
+        textMuted: "#9CA3AF",
+        border: "#374151"
+    } : {
+        primary: "#E6BEAE",
+        secondary: "#B5C99A",
+        dark: "#4A4A4A",
+        light: "#FDFBF7", // Soft Antique White
+        white: "#FFFFFF",
+        textMuted: "#6B7280",
+        border: "#E5E7EB"
+    };
 
     useEffect(() => {
         if (location.state?.showLogin) {
@@ -25,9 +166,16 @@ const LandingPage: React.FC = () => {
     }, [location]);
 
     useEffect(() => {
-        const handleScroll = () => setScrolled(window.scrollY > 50);
+        const handleScroll = () => setScrolled(window.scrollY > 20);
         window.addEventListener('scroll', handleScroll);
         return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setActiveHeroImage((prev) => (prev + 1) % heroImages.length);
+        }, 5000);
+        return () => clearInterval(interval);
     }, []);
 
     const toggleFaq = (index: number) => {
@@ -35,323 +183,406 @@ const LandingPage: React.FC = () => {
     };
 
     const designs = [
-        { name: "Classic", color: "#F3F4F6", borderColor: "#D1D5DB" },
-        { name: "Aquarelle", color: "#E0F2FE", borderColor: "#BAE6FD" },
-        { name: "Elegant", color: "#FDF4FF", borderColor: "#F5D0FE" },
-        { name: "Moonlight", color: "#111827", borderColor: "#374151" }, // Dark theme mock
-        { name: "Vintage", color: "#FEF3C7", borderColor: "#FDE68A" },
-        { name: "Minimal", color: "#FAFAF9", borderColor: "#E7E5E4" },
-    ];
-
-    const features = [
-        { icon: <CheckCircle size={20} />, text: "Confirmación de asistencia (RSVP)" },
-        { icon: <MapPin size={20} />, text: "Ubicación con mapas (Google Maps/Waze)" },
-        { icon: <Calendar size={20} />, text: "Cuenta regresiva" },
-        { icon: <Clock size={20} />, text: "Itinerario del evento" },
-        { icon: <Music size={20} />, text: "Música de fondo" },
-        { icon: <Gift size={20} />, text: "Mesa de regalos / Sobres" },
-        { icon: <Image size={20} />, text: "Galería de fotos ilimitada" },
-        { icon: <Smartphone size={20} />, text: "Diseño 100% móvil interactivo" },
-    ];
-
-    const faqs = [
-        { q: "¿Cómo envío las invitaciones?", a: "Es muy fácil. Una vez creada, obtendrás un enlace único (link) que puedes compartir por WhatsApp, Email o redes sociales." },
-        { q: "¿Tengo que pagar antes de diseñar?", a: "¡No! Puedes diseñar tu invitación totalmente gratis. Solo pagas si decides publicarla para enviarla a tus invitados." },
-        { q: "¿Cuánto tiempo dura activa la invitación?", a: "La invitación permanece activa hasta 3 meses después de la fecha de tu boda, para que los invitados puedan subir fotos y ver los recuerdos." },
-        { q: "¿Es una App que deben descargar?", a: "No. Es una Web App que funciona en cualquier navegador (Chrome, Safari) sin descargar nada." },
+        { name: "Blush Luxury", color: "#FFF0F5", border: "#FBCFE8", accent: "#E6BEAE" },
+        { name: "Sage Garden", color: "#F0FFF4", border: "#BBF7D0", accent: "#B5C99A" },
+        { name: "Classic Cream", color: "#FFFAF0", border: "#FEEBC8", accent: "#D4A373" },
     ];
 
     return (
-        <div style={{ fontFamily: "'Lato', sans-serif", backgroundColor: '#FAFAF9', overflowX: 'hidden' }}>
+        <div style={{ fontFamily: "'Montserrat', sans-serif", backgroundColor: colors.light, color: colors.dark, overflowX: 'hidden', minHeight: '100vh', transition: 'background-color 0.3s ease, color 0.3s ease' }}>
             <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
+
+            <style>{`
+                @keyframes fadeInUp {
+                    from { opacity: 0; transform: translateY(20px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                .animate-fade-up {
+                    animation: fadeInUp 0.8s ease-out forwards;
+                    opacity: 0;
+                }
+                .delay-100 { animation-delay: 0.1s; }
+                .delay-200 { animation-delay: 0.2s; }
+                .delay-300 { animation-delay: 0.3s; }
+                
+                @media (max-width: 900px) {
+                    header { flex-direction: column; }
+                    header > div { min-height: 50vh !important; }
+                    .feature-row { flexDirection: column !important; text-align: center; gap: 2rem !important; }
+                    .feature-row ul { align-items: center; }
+                }
+            `}</style>
 
             {/* Navbar */}
             <nav style={{
-                padding: '1rem 5%',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                position: 'sticky',
+                position: 'fixed',
+                width: '100%',
                 top: 0,
                 zIndex: 100,
                 transition: 'all 0.3s ease',
-                backgroundColor: scrolled ? 'rgba(255, 255, 255, 0.95)' : 'rgba(255, 255, 255, 0.8)',
-                backdropFilter: 'blur(10px)',
+                backgroundColor: scrolled ? (darkMode ? 'rgba(17, 24, 39, 0.98)' : 'rgba(229, 231, 235, 0.98)') : 'transparent',
+                backdropFilter: scrolled ? 'blur(10px)' : 'none',
                 boxShadow: scrolled ? '0 4px 20px rgba(0,0,0,0.03)' : 'none',
-                flexWrap: 'wrap',
-                gap: '1rem'
+                borderBottom: scrolled ? `1px solid ${colors.border}` : 'none',
+                display: 'flex',
+                justifyContent: 'center'
             }}>
                 <div style={{
-                    fontFamily: "'Playfair Display', serif",
-                    fontSize: '1.4rem',
-                    fontWeight: 700,
-                    color: '#2D2A26',
+                    maxWidth: '1200px',
+                    width: '100%',
+                    padding: '1rem 1.5rem',
                     display: 'flex',
+                    justifyContent: 'space-between',
                     alignItems: 'center',
-                    gap: '0.5rem'
                 }}>
-                    <Heart size={20} fill="#D4AF37" color="#D4AF37" /> BodaDigital
-                </div>
+                    <div style={{
+                        fontFamily: "'Playfair Display', serif",
+                        fontSize: '1.6rem',
+                        fontWeight: 700,
+                        color: colors.dark,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.6rem',
+                        letterSpacing: '-0.5px'
+                    }}>
+                        <div style={{ backgroundColor: colors.primary, borderRadius: '50%', padding: '6px', display: 'flex' }}>
+                            <Heart size={18} fill="white" color="white" />
+                        </div>
+                        BodaDigital
+                    </div>
 
-                <div className="nav-buttons" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                    {user ? (
-                        <>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#555', fontWeight: 500 }}>
-                                <User size={18} /> Hola, {user.username}
-                            </div>
+                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                        {/* Dark Mode Toggle */}
+                        <button
+                            onClick={() => setDarkMode(!darkMode)}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: '0.4rem',
+                                background: 'transparent', border: `1px solid ${colors.border}`,
+                                padding: '0.4rem 0.8rem', borderRadius: '20px',
+                                fontSize: '0.8rem', fontWeight: 600, color: colors.dark,
+                                cursor: 'pointer',
+                                transition: 'all 0.2s'
+                            }}
+                        >
+                            {darkMode ? <Moon size={14} /> : <Sun size={14} />}
+                            {darkMode ? (lang === 'en' ? 'Dark' : 'Noche') : (lang === 'en' ? 'Light' : 'Día')}
+                        </button>
+
+                        {/* Language Toggle */}
+                        <button
+                            onClick={() => setLang(l => l === 'es' ? 'en' : 'es')}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: '0.4rem',
+                                background: 'transparent', border: `1px solid ${colors.border}`,
+                                padding: '0.4rem 0.8rem', borderRadius: '20px',
+                                fontSize: '0.8rem', fontWeight: 600, color: colors.dark,
+                                cursor: 'pointer'
+                            }}
+                        >
+                            <Globe size={14} /> {lang.toUpperCase()}
+                        </button>
+
+                        {!user && (
+                            <button
+                                onClick={() => setShowLoginModal(true)}
+                                style={{
+                                    background: 'transparent',
+                                    color: colors.dark,
+                                    border: 'none',
+                                    fontWeight: 600,
+                                    fontSize: '0.95rem',
+                                    cursor: 'pointer',
+                                    padding: '0.5rem'
+                                }}
+                            >
+                                {t.nav.login}
+                            </button>
+                        )}
+                        {user && (
                             <button
                                 onClick={() => navigate('/dashboard')}
                                 style={{
-                                    background: '#2D2A26',
-                                    color: '#fff',
-                                    padding: '0.5rem 1.2rem',
-                                    fontSize: '0.9rem',
+                                    background: colors.dark,
+                                    color: darkMode ? '#111827' : '#fff',
+                                    padding: '0.7rem 1.8rem',
                                     borderRadius: '50px',
-                                    cursor: 'pointer'
-                                }}
-                            >
-                                Ir al Panel
-                            </button>
-                            <button
-                                onClick={logout}
-                                style={{
-                                    background: 'transparent',
+                                    fontSize: '0.95rem',
+                                    fontWeight: 600,
                                     border: 'none',
-                                    color: '#999',
-                                    cursor: 'pointer'
-                                }}
-                                title="Cerrar sesión"
-                            >
-                                <LogOut size={20} />
-                            </button>
-                        </>
-                    ) : (
-                        <>
-                            <button
-                                onClick={() => setShowLoginModal(true)}
-                                style={{
-                                    background: 'transparent',
-                                    color: '#2D2A26',
-                                    border: 'none',
-                                    fontWeight: 500,
-                                    padding: 0,
-                                    fontSize: '0.9rem',
-                                    cursor: 'pointer'
+                                    cursor: 'pointer',
+                                    boxShadow: '0 4px 6px rgba(0,0,0,0.05)'
                                 }}
                             >
-                                Entrar
+                                {t.nav.panel}
                             </button>
-                            <button
-                                onClick={() => setShowLoginModal(true)}
-                                style={{
-                                    background: '#2D2A26',
-                                    color: '#fff',
-                                    padding: '0.5rem 1.2rem',
-                                    fontSize: '0.9rem'
-                                }}
-                            >
-                                Empezar
-                            </button>
-                        </>
-                    )}
+                        )}
+                    </div>
                 </div>
             </nav>
 
-            {/* Hero Section */}
+            {/* Split Hero Section */}
             <header style={{
-                position: 'relative',
-                padding: 'clamp(3rem, 8vw, 6rem) 1rem',
-                textAlign: 'center',
-                background: 'radial-gradient(circle at 50% 50%, #fff 0%, #FAFAF9 100%)',
-                overflow: 'hidden'
+                display: 'flex',
+                minHeight: '100vh',
+                position: 'relative'
             }}>
+                {/* Left: Slideshow */}
                 <div style={{
-                    position: 'absolute', top: '-10%', left: '-5%', width: '400px', height: '400px',
-                    background: '#F3E5AB', opacity: 0.3, filter: 'blur(80px)', borderRadius: '50%', zIndex: 0
-                }} />
-
-                <div style={{ position: 'relative', zIndex: 1, maxWidth: '1000px', margin: '0 auto' }}>
-                    <span className="animate-fade-in" style={{
-                        display: 'inline-block',
-                        padding: '0.6rem 1.2rem',
-                        backgroundColor: '#fff',
-                        border: '1px solid #E8DCC4',
-                        color: '#D4AF37',
-                        borderRadius: '50px',
-                        fontSize: '0.8rem',
-                        fontWeight: 700,
-                        marginBottom: '1.5rem',
-                        letterSpacing: '1.5px',
-                        boxShadow: '0 4px 10px rgba(0,0,0,0.03)'
-                    }}>
-                        LA INVITACIÓN PERFECTA
-                    </span>
-
-                    <h1 className="animate-fade-in delay-100" style={{
-                        fontSize: 'clamp(2.5rem, 6vw, 4.5rem)',
-                        color: '#2D2A26',
-                        marginBottom: '1.5rem',
-                        lineHeight: 1.1,
-                        letterSpacing: '-1px'
-                    }}>
-                        Invitaciones de boda <br />
-                        <span style={{
-                            background: 'linear-gradient(120deg, #D4AF37 0%, #F3E5AB 100%)',
-                            WebkitBackgroundClip: 'text',
-                            WebkitTextFillColor: 'transparent',
-                            fontStyle: 'italic'
-                        }}>digitales e interactivas</span>.
-                    </h1>
-
-                    <p className="animate-fade-in delay-200" style={{
-                        fontSize: '1.25rem',
-                        color: '#666',
-                        maxWidth: '700px',
-                        margin: '0 auto 2.5rem',
-                        lineHeight: 1.6
-                    }}>
-                        Sorprende a tus invitados con una experiencia única. Fáciles de crear, hermosas de ver y perfectas para organizar tu gran día.
-                    </p>
-
-                    <div className="animate-fade-in delay-300">
-                        <button
-                            onClick={() => user ? navigate('/dashboard') : setShowLoginModal(true)}
+                    flex: 1.1,
+                    position: 'relative',
+                    overflow: 'hidden',
+                    minHeight: '50vh',
+                    backgroundColor: darkMode ? '#111' : '#E5E7EB'
+                }}>
+                    {heroImages.map((img, index) => (
+                        <div
+                            key={index}
                             style={{
-                                backgroundColor: '#D4AF37',
-                                color: '#fff',
-                                padding: '1rem 2.5rem',
-                                fontSize: '1.1rem',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '0.5rem',
-                                boxShadow: '0 10px 25px rgba(212, 175, 55, 0.3)'
+                                position: 'absolute',
+                                inset: 0,
+                                backgroundImage: `url(${img})`,
+                                backgroundSize: 'cover',
+                                backgroundPosition: 'center',
+                                opacity: activeHeroImage === index ? 1 : 0,
+                                transition: 'opacity 1.5s ease-in-out',
+                                transform: activeHeroImage === index ? 'scale(1.05)' : 'scale(1)',
+                                transitionProperty: 'opacity, transform',
+                                transitionDuration: '1.5s, 6s',
                             }}
-                        >
-                            Crear mi Invitación <ArrowRight size={20} />
-                        </button>
-                    </div>
+                        />
+                    ))}
+                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(0,0,0,0.1), transparent)' }}></div>
+                </div>
 
-                    <div className="animate-float" style={{ marginTop: '5rem', display: 'flex', justifyContent: 'center', perspective: '1500px' }}>
-                        <div style={{
-                            width: '300px', height: '600px', backgroundColor: '#fff', borderRadius: '45px',
-                            boxShadow: '0 30px 60px rgba(0,0,0,0.12), 0 0 0 12px #2D2A26',
-                            overflow: 'hidden', position: 'relative'
+                {/* Right: Content */}
+                <div style={{
+                    flex: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    padding: 'clamp(3rem, 5vw, 6rem)',
+                    backgroundColor: colors.light,
+                    transition: 'background-color 0.3s ease'
+                }}>
+                    <div style={{ maxWidth: '600px' }}>
+                        <h1 className="animate-fade-up delay-100" style={{
+                            fontFamily: "'Playfair Display', serif",
+                            fontSize: 'clamp(2.5rem, 5vw, 4rem)',
+                            color: colors.dark,
+                            lineHeight: 1.1,
+                            marginBottom: '1.5rem',
+                            letterSpacing: '-1px'
                         }}>
-                            <img src={invitationPreviewValues} alt="Demo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            {t.hero.title1} <br />
+                            <span style={{ fontStyle: 'italic', color: colors.primary }}>{t.hero.title2}</span>
+                        </h1>
+
+                        <p className="animate-fade-up delay-200" style={{
+                            fontSize: '1.1rem', color: colors.textMuted, lineHeight: 1.7, marginBottom: '2.5rem'
+                        }}>
+                            {t.hero.subtitle}
+                        </p>
+
+                        <div className="animate-fade-up delay-300" style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                            <button
+                                onClick={() => user ? navigate('/dashboard') : setShowLoginModal(true)}
+                                style={{
+                                    backgroundColor: colors.primary,
+                                    color: '#fff',
+                                    padding: '1rem 2.5rem',
+                                    borderRadius: '4px',
+                                    fontSize: '1rem',
+                                    fontWeight: 600,
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.8rem',
+                                    boxShadow: `0 4px 6px ${colors.primary}40`,
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '1px'
+                                }}
+                            >
+                                {t.hero.cta} <ArrowRight size={18} />
+                            </button>
+                        </div>
+
+                        <div className="animate-fade-up delay-300" style={{ marginTop: '3rem', display: 'flex', alignItems: 'center', gap: '1rem', color: colors.textMuted, fontSize: '0.9rem' }}>
+                            <div style={{ display: 'flex' }}>
+                                {[1, 2, 3, 4, 5].map(s => <Star key={s} size={16} fill={colors.secondary} color={colors.secondary} />)}
+                            </div>
+                            <span>{t.hero.stats}</span>
                         </div>
                     </div>
                 </div>
             </header>
 
-            {/* How it Works Section */}
-            <section id="cómo-funciona" style={{ padding: 'clamp(3rem, 6vw, 5rem) 1rem', backgroundColor: '#fff' }}>
-                <div style={{ maxWidth: '1200px', margin: '0 auto', textAlign: 'center' }}>
-                    <h2 style={{ fontSize: '2.5rem', marginBottom: '3rem' }}>¿Cómo funciona?</h2>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '2rem' }}>
-                        {[
-                            { step: "01", title: "Crea tu diseño", desc: "Elige una plantilla y personalízala con tus fotos y datos al instante.", icon: <Palette size={32} color="#D4AF37" /> },
-                            { step: "02", title: "Envía por WhatsApp", desc: "Comparte el enlace único con todos tus invitados en un solo clic.", icon: <Send size={32} color="#D4AF37" /> },
-                            { step: "03", title: "Recibe confirmaciones", desc: "Mira quién asistirá desde tu panel de control en tiempo real.", icon: <CheckCircle size={32} color="#D4AF37" /> }
-                        ].map((item, i) => (
-                            <div key={i} style={{ padding: '2rem', borderRadius: '15px', backgroundColor: '#FAFAF9' }}>
-                                <div style={{ marginBottom: '1rem' }}>{item.icon}</div>
-                                <span style={{ fontSize: '3rem', fontWeight: 700, color: '#E8E8E8', lineHeight: 1 }}>{item.step}</span>
-                                <h3 style={{ fontSize: '1.5rem', margin: '1rem 0' }}>{item.title}</h3>
-                                <p style={{ color: '#666' }}>{item.desc}</p>
-                            </div>
+            {/* Trusted By Bar */}
+            <div style={{ backgroundColor: colors.white, padding: '2rem 0', borderBottom: `1px solid ${colors.border}`, transition: 'background-color 0.3s ease' }}>
+                <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 1.5rem', textAlign: 'center' }}>
+                    <p style={{ fontSize: '0.8rem', color: colors.textMuted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '1.5rem' }}>
+                        {t.trusted}
+                    </p>
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: '3rem', flexWrap: 'wrap', opacity: 0.6, filter: darkMode ? 'grayscale(1) invert(1)' : 'grayscale(1)' }}>
+                        {['Google Maps', 'Spotify', 'WhatsApp', 'Calendar'].map((brand, i) => (
+                            <span key={i} style={{ fontSize: '1.2rem', fontWeight: 700, color: colors.dark, fontFamily: "'Playfair Display', serif" }}>{brand}</span>
                         ))}
+                    </div>
+                </div>
+            </div>
+
+            {/* Content Sections */}
+
+            {/* Features Zig Zag */}
+            <section style={{ padding: '6rem 1.5rem', backgroundColor: colors.white, transition: 'background-color 0.3s ease' }}>
+                <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '8rem' }}>
+                    {/* Feature 1 */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4rem', flexDirection: 'row' }} className="feature-row">
+                        <div style={{ flex: 1 }}>
+                            <div style={{ width: '50px', height: '50px', background: darkMode ? '#374151' : '#FFF0F5', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem' }}>
+                                <Palette size={24} color={colors.primary} />
+                            </div>
+                            <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: '2.5rem', marginBottom: '1.5rem', color: colors.dark }}>{t.features.f1.title}</h2>
+                            <p style={{ color: colors.textMuted, lineHeight: 1.7, fontSize: '1.1rem', marginBottom: '2rem' }}>
+                                {t.features.f1.desc}
+                            </p>
+                            <ul style={{ padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                {t.features.f1.items.map(item => (
+                                    <li key={item} style={{ display: 'flex', gap: '0.8rem', alignItems: 'center', color: colors.dark, fontWeight: 500 }}>
+                                        <CheckCircle size={18} color={colors.secondary} /> {item}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                        <div style={{ flex: 1, backgroundColor: colors.light, height: '400px', borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${colors.border}`, transition: 'background-color 0.3s ease' }}>
+                            <Layout size={80} color={darkMode ? "#4B5563" : "#D1D5DB"} />
+                        </div>
+                    </div>
+
+                    {/* Feature 2 (Reversed) */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4rem', flexDirection: 'row-reverse' }} className="feature-row">
+                        <div style={{ flex: 1 }}>
+                            <div style={{ width: '50px', height: '50px', background: darkMode ? '#374151' : '#F0FFF4', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem' }}>
+                                <Smartphone size={24} color={colors.secondary} />
+                            </div>
+                            <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: '2.5rem', marginBottom: '1.5rem', color: colors.dark }}>{t.features.f2.title}</h2>
+                            <p style={{ color: colors.textMuted, lineHeight: 1.7, fontSize: '1.1rem', marginBottom: '2rem' }}>
+                                {t.features.f2.desc}
+                            </p>
+                            <ul style={{ padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                {t.features.f2.items.map(item => (
+                                    <li key={item} style={{ display: 'flex', gap: '0.8rem', alignItems: 'center', color: colors.dark, fontWeight: 500 }}>
+                                        <CheckCircle size={18} color={colors.secondary} /> {item}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                        <div style={{ flex: 1, backgroundColor: colors.light, height: '400px', borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${colors.border}`, transition: 'background-color 0.3s ease' }}>
+                            <User size={80} color={darkMode ? "#4B5563" : "#D1D5DB"} />
+                        </div>
                     </div>
                 </div>
             </section>
 
-            {/* Designs Showcase */}
-            <section id="diseños" style={{ padding: 'clamp(3rem, 6vw, 5rem) 1rem', backgroundColor: '#FAFAF9' }}>
-                <div style={{ maxWidth: '1200px', margin: '0 auto', textAlign: 'center' }}>
-                    <h2 style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>Modelos Exclusivos</h2>
-                    <p style={{ color: '#666', marginBottom: '3rem' }}>Diseños pensados para cada estilo de boda.</p>
+            {/* Design Showcase */}
+            <section style={{ padding: '6rem 1.5rem', backgroundColor: colors.light, transition: 'background-color 0.3s ease' }}>
+                <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+                    <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
+                        <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: '2.5rem', color: colors.dark, margin: 0 }}>{t.showcase.title}</h2>
+                        <p style={{ fontSize: '1.1rem', color: colors.textMuted, marginTop: '1rem' }}>{t.showcase.subtitle}</p>
+                    </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1.5rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
                         {designs.map((design, i) => (
                             <div key={i} style={{
-                                backgroundColor: design.color,
-                                border: `1px solid ${design.borderColor}`,
-                                aspectRatio: '3/4',
-                                borderRadius: '12px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                flexDirection: 'column',
+                                backgroundColor: colors.white,
+                                borderRadius: '0',
+                                border: `1px solid ${colors.border}`,
+                                transition: 'all 0.3s ease',
                                 cursor: 'pointer',
-                                transition: 'transform 0.3s ease',
-                                boxShadow: '0 4px 6px rgba(0,0,0,0.05)'
+                                position: 'relative'
                             }}
-                                onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-5px)'}
-                                onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                                className="design-card"
                             >
-                                <Layout size={32} color="#D4AF37" style={{ marginBottom: '1rem', opacity: 0.8 }} />
-                                <span style={{ fontFamily: "'Playfair Display', serif", fontSize: '1.2rem', color: '#2D2A26' }}>
-                                    {design.name}
-                                </span>
+                                <div style={{
+                                    height: '400px',
+                                    backgroundColor: design.color,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    borderBottom: `1px solid ${colors.border}`,
+                                    padding: '2rem'
+                                }}>
+                                    <div style={{
+                                        width: '100%', height: '100%', backgroundColor: 'white',
+                                        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.05)',
+                                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                                        border: `1px solid ${design.border}`
+                                    }}>
+                                        <div style={{ fontFamily: "'Great Vibes', cursive", fontSize: '2.5rem', color: design.accent, marginBottom: '0.5rem' }}>M & J</div>
+                                        <div style={{ fontSize: '0.7rem', letterSpacing: '3px', textTransform: 'uppercase', color: '#9CA3AF' }}>SAVE THE DATE</div>
+                                    </div>
+                                </div>
+                                <div style={{ padding: '1.5rem', textAlign: 'center' }}>
+                                    <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: colors.dark, margin: 0 }}>{design.name}</h3>
+                                </div>
                             </div>
                         ))}
                     </div>
-                    <div style={{ marginTop: '3rem' }}>
-                        <button onClick={() => user ? navigate('/dashboard') : setShowLoginModal(true)} style={{ backgroundColor: '#2D2A26', color: '#fff', padding: '1rem 2rem' }}>
-                            Ver todos los diseños
+
+                    <div style={{ textAlign: 'center', marginTop: '4rem' }}>
+                        <button
+                            onClick={() => user ? navigate('/dashboard') : setShowLoginModal(true)}
+                            style={{
+                                border: `1px solid ${colors.dark}`,
+                                backgroundColor: 'transparent',
+                                color: colors.dark,
+                                padding: '1rem 3rem',
+                                fontSize: '0.9rem',
+                                fontWeight: 600,
+                                textTransform: 'uppercase',
+                                letterSpacing: '1px',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            {t.showcase.cta}
                         </button>
                     </div>
                 </div>
             </section>
 
-            {/* Features Detail */}
-            <section style={{ padding: 'clamp(3rem, 6vw, 5rem) 1rem', backgroundColor: '#fff' }}>
-                <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
-                    <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-                        <h2 style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>Todo lo que incluye</h2>
-                        <p style={{ color: '#666' }}>La herramienta más completa para tu boda.</p>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
-                        {features.map((feature, i) => (
-                            <div key={i} style={{
-                                display: 'flex', alignItems: 'center', gap: '1rem',
-                                padding: '1.5rem', borderRadius: '12px', border: '1px solid #eee'
-                            }}>
-                                <div style={{ color: '#D4AF37' }}>{feature.icon}</div>
-                                <span style={{ fontSize: '1.1rem', fontWeight: 500, color: '#444' }}>{feature.text}</span>
-                            </div>
-                        ))}
-                    </div>
+            {/* Testimonial */}
+            <section style={{ padding: '6rem 1.5rem', backgroundColor: darkMode ? '#000' : colors.dark, color: 'white', textAlign: 'center' }}>
+                <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+                    <div style={{ marginBottom: '2rem' }}><Star size={24} fill={colors.primary} color={colors.primary} /></div>
+                    <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: '2rem', fontStyle: 'italic', lineHeight: 1.6, marginBottom: '2rem' }}>
+                        {t.testimonial.text}
+                    </h3>
+                    <p style={{ fontWeight: 700, fontSize: '0.9rem', color: colors.primary }}>
+                        {t.testimonial.author}
+                    </p>
                 </div>
             </section>
 
-
-
-
-
             {/* FAQ */}
-            <section style={{ padding: 'clamp(3rem, 6vw, 5rem) 1rem', backgroundColor: '#FAFAF9' }}>
+            <section style={{ padding: '6rem 1.5rem', backgroundColor: colors.white, transition: 'background-color 0.3s ease' }}>
                 <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-                    <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-                        <h2 style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>Preguntas Frecuentes</h2>
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                        {faqs.map((faq, i) => (
-                            <div key={i} style={{ backgroundColor: '#fff', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 2px 5px rgba(0,0,0,0.02)' }}>
+                    <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: '2.5rem', color: colors.dark, marginBottom: '3rem', textAlign: 'center' }}>{t.faq.title}</h2>
+                    <div style={{ display: 'grid', gap: '1.5rem' }}>
+                        {t.faq.items.map((faq, i) => (
+                            <div key={i} style={{ borderBottom: `1px solid ${colors.border}`, paddingBottom: '1.5rem' }}>
                                 <button
                                     onClick={() => toggleFaq(i)}
                                     style={{
-                                        width: '100%', padding: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                        background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontSize: '1.1rem', fontWeight: 600
+                                        width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                        background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
+                                        fontSize: '1.1rem', fontWeight: 600, color: colors.dark, fontFamily: "'Playfair Display', serif"
                                     }}>
                                     {faq.q}
                                     {openFaq === i ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                                 </button>
                                 {openFaq === i && (
-                                    <div style={{ padding: '0 1.5rem 1.5rem', color: '#666', lineHeight: 1.6 }}>
-                                        {faq.a}
-                                    </div>
+                                    <div style={{ marginTop: '1rem', color: colors.textMuted, lineHeight: 1.6 }}>{faq.a}</div>
                                 )}
                             </div>
                         ))}
@@ -359,96 +590,21 @@ const LandingPage: React.FC = () => {
                 </div>
             </section>
 
-            {/* Final Footer CTA & Links */}
-            <footer style={{ backgroundColor: '#2D2A26', color: '#fff', paddingTop: '6rem' }}>
-                <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 1rem' }}>
-                    {/* CTA Box */}
-                    <div style={{
-                        textAlign: 'center', maxWidth: '600px', margin: '0 auto 6rem',
-                        borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '6rem'
-                    }}>
-                        <h2 style={{ fontSize: '3rem', marginBottom: '1.5rem', color: '#fff' }}>Empieza Hoy</h2>
-                        <p style={{ fontSize: '1.2rem', color: '#aaa', marginBottom: '3rem' }}>
-                            Sin descargas. Sin tarjetas de crédito para probar.
-                        </p>
-                        <button
-                            onClick={() => user ? navigate('/dashboard') : setShowLoginModal(true)}
-                            style={{
-                                backgroundColor: '#D4AF37',
-                                color: '#fff',
-                                padding: '1.2rem 3.5rem',
-                                fontSize: '1.2rem',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '0.8rem',
-                                boxShadow: '0 15px 30px rgba(212, 175, 55, 0.25)'
-                            }}
-                        >
-                            Crear Invitación Gratis <ArrowRight size={20} />
-                        </button>
+            {/* Footer */}
+            <footer style={{ backgroundColor: colors.light, padding: '4rem 1.5rem', borderTop: `1px solid ${colors.border}`, transition: 'background-color 0.3s ease' }}>
+                <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontFamily: "'Playfair Display', serif", fontSize: '1.4rem', color: colors.dark }}>
+                        <Heart size={20} fill={colors.primary} color={colors.primary} /> BodaDigital
                     </div>
-
-                    {/* Links Columns */}
-                    <div style={{
-                        display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                        gap: '3rem', paddingBottom: '4rem'
-                    }}>
-                        {/* Brand */}
-                        <div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.5rem', fontFamily: "'Playfair Display', serif", marginBottom: '1.5rem', color: '#D4AF37' }}>
-                                <Heart size={24} fill="#D4AF37" /> BodaDigital
-                            </div>
-                            <p style={{ color: '#888', lineHeight: 1.6 }}>
-                                La plataforma líder para crear invitaciones de boda digitales que enamoran a tus invitados.
-                            </p>
-                        </div>
-
-                        {/* Column 1 */}
-                        <div>
-                            <h4 style={{ color: '#fff', marginBottom: '1.5rem', fontSize: '1.1rem' }}>Producto</h4>
-                            <ul style={{ listStyle: 'none', padding: 0 }}>
-                                {['Diseños', 'Características', 'Ejemplos'].map(item => (
-                                    <li key={item} style={{ marginBottom: '0.8rem' }}>
-                                        <a href="#" style={{ color: '#aaa', textDecoration: 'none', transition: 'color 0.2s' }} className="footer-link">{item}</a>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-
-                        {/* Column 2 */}
-                        <div>
-                            <h4 style={{ color: '#fff', marginBottom: '1.5rem', fontSize: '1.1rem' }}>Soporte</h4>
-                            <ul style={{ listStyle: 'none', padding: 0 }}>
-                                {['Centro de Ayuda', 'Preguntas Frecuentes', 'Contacto', 'Estado del servicio'].map(item => (
-                                    <li key={item} style={{ marginBottom: '0.8rem' }}>
-                                        <a href="#" style={{ color: '#aaa', textDecoration: 'none', transition: 'color 0.2s' }} className="footer-link">{item}</a>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-
-                        {/* Column 3 */}
-                        <div>
-                            <h4 style={{ color: '#fff', marginBottom: '1.5rem', fontSize: '1.1rem' }}>Legal</h4>
-                            <ul style={{ listStyle: 'none', padding: 0 }}>
-                                {['Términos de servicio', 'Privacidad', 'Cookies'].map(item => (
-                                    <li key={item} style={{ marginBottom: '0.8rem' }}>
-                                        <a href="#" style={{ color: '#aaa', textDecoration: 'none', transition: 'color 0.2s' }} className="footer-link">{item}</a>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
+                    <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+                        {t.footer.links.map(link => (
+                            <a key={link} href="#" style={{ color: colors.textMuted, textDecoration: 'none', fontSize: '0.9rem', fontWeight: 500 }}>{link}</a>
+                        ))}
                     </div>
-
-                    {/* Copyright */}
-                    <div style={{
-                        borderTop: '1px solid rgba(255,255,255,0.1)', padding: '2rem 0',
-                        textAlign: 'center', color: '#666', fontSize: '0.9rem'
-                    }}>
-                        &copy; {new Date().getFullYear()} BodaDigital. Todos los derechos reservados. Hecho con ❤️ para el amor.
-                    </div>
+                    <p style={{ color: colors.textMuted, fontSize: '0.85rem' }}>&copy; 2024 BodaDigital. {t.footer.rights}</p>
                 </div>
             </footer>
+
         </div>
     );
 };
