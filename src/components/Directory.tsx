@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { HelpCircle, Filter, Search, ChevronDown, CheckSquare, Square } from 'lucide-react';
+import { HelpCircle, Filter, Search, ChevronDown, CheckSquare } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
 const Directory: React.FC = () => {

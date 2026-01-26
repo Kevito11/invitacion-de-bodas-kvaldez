@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { Calendar } from 'lucide-react';
 
 const EventsTable: React.FC = () => {
+    const [selectedEvents, setSelectedEvents] = useState<string[]>([]);
     const { user } = useAuth();
     const { colors, theme } = useTheme();
     const navigate = useNavigate();
@@ -51,17 +52,89 @@ const EventsTable: React.FC = () => {
 
 
 
-    const handleEdit = () => {
-        navigate('/create');
+
+
+    const toggleSelectAll = (checked: boolean) => {
+        if (checked) {
+            setSelectedEvents(events.map(ev => ev.id));
+        } else {
+            setSelectedEvents([]);
+        }
+    };
+
+    const toggleSelectEvent = (id: string) => {
+        setSelectedEvents(prev =>
+            prev.includes(id)
+                ? prev.filter(eventId => eventId !== id)
+                : [...prev, id]
+        );
+    };
+
+    const handleDeleteSelected = () => {
+        if (selectedEvents.length === 0 || !user?.username) return;
+
+        if (window.confirm(`¿Estás seguro de que deseas eliminar ${selectedEvents.length} evento(s)? Esta acción no se puede deshacer.`)) {
+            // Get current events from localStorage
+            const rawData = localStorage.getItem(`events_${user.username}`);
+            if (rawData) {
+                try {
+                    const allEvents = JSON.parse(rawData);
+                    // Filter out deleted events
+                    const updatedEvents = allEvents.filter((ev: any) => !selectedEvents.includes(ev.id));
+
+                    // Save back to localStorage
+                    localStorage.setItem(`events_${user.username}`, JSON.stringify(updatedEvents));
+
+                    // Update local state
+                    const mappedEvents = updatedEvents.map((ev: any) => ({
+                        id: ev.id,
+                        title: `Boda de ${ev.partner1} & ${ev.partner2}`,
+                        originalData: ev,
+                        type: 'Invitación + Confirmación de asistencia',
+                        image: ev.imageUrl || null,
+                        created: new Date().toLocaleDateString('es-ES'),
+                        eventDate: ev.date ? new Date(ev.date).toLocaleDateString('es-ES') : 'Por definir',
+                        lastDelivery: 'Sin enviar',
+                        openRate: 0,
+                        responseRate: 0,
+                        status: 'Modo de prueba'
+                    }));
+                    setEvents(mappedEvents);
+                    setSelectedEvents([]);
+
+                } catch (e) {
+                    console.error("Error deleting events", e);
+                }
+            }
+        }
     };
 
     return (
         <div style={{ backgroundColor: colors.cardBg, border: `1px solid ${colors.border}`, borderRadius: '4px', overflow: 'hidden', fontFamily: "'Montserrat', sans-serif" }}>
             {/* Toolbar */}
             <div style={{ padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${colors.border}` }}>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                     <button style={{ padding: '0.5rem 1rem', border: `1px solid ${colors.border}`, background: colors.cardBg, borderRadius: '4px', color: theme === 'dark' ? '#34D399' : '#059669', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' }}>Activo</button>
                     <button style={{ padding: '0.5rem 1rem', border: `1px solid ${colors.border}`, background: 'transparent', borderRadius: '4px', color: colors.muted, fontSize: '0.85rem', cursor: 'pointer' }}>Archivado</button>
+
+                    {selectedEvents.length > 0 && (
+                        <button
+                            onClick={handleDeleteSelected}
+                            style={{
+                                marginLeft: '1rem',
+                                padding: '0.5rem 1rem',
+                                border: 'none',
+                                background: '#EF4444',
+                                borderRadius: '4px',
+                                color: 'white',
+                                fontSize: '0.85rem',
+                                cursor: 'pointer',
+                                fontWeight: 600
+                            }}
+                        >
+                            Eliminar ({selectedEvents.length})
+                        </button>
+                    )}
                 </div>
                 <input
                     type="text"
@@ -83,7 +156,13 @@ const EventsTable: React.FC = () => {
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', color: colors.text }}>
                     <thead style={{ backgroundColor: theme === 'dark' ? 'rgba(0,0,0,0.2)' : '#F9FAFB', borderBottom: `1px solid ${colors.border}` }}>
                         <tr>
-                            <th style={{ padding: '1rem', width: '40px' }}><input type="checkbox" /></th>
+                            <th style={{ padding: '1rem', width: '40px' }}>
+                                <input
+                                    type="checkbox"
+                                    checked={events.length > 0 && selectedEvents.length === events.length}
+                                    onChange={(e) => toggleSelectAll(e.target.checked)}
+                                />
+                            </th>
                             <th style={{ padding: '1rem', textAlign: 'left' }}>Título del envío</th>
                             <th style={{ padding: '1rem', textAlign: 'left' }}>Creado el</th>
                             <th style={{ padding: '1rem', textAlign: 'left' }}>Fecha del evento</th>
@@ -97,7 +176,13 @@ const EventsTable: React.FC = () => {
                         {events.length > 0 ? (
                             events.map(ev => (
                                 <tr key={ev.id} style={{ borderBottom: `1px solid ${colors.border}` }}>
-                                    <td style={{ padding: '1rem', textAlign: 'center' }}><input type="checkbox" /></td>
+                                    <td style={{ padding: '1rem', textAlign: 'center' }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedEvents.includes(ev.id)}
+                                            onChange={() => toggleSelectEvent(ev.id)}
+                                        />
+                                    </td>
                                     <td style={{ padding: '1rem' }}>
                                         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                                             <div style={{

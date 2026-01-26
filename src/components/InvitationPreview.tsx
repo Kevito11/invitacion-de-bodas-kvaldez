@@ -632,7 +632,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, isGuest = f
                                         // Custom logic for Group RSVP
                                         if (guest && guest.groupId) {
                                             const checkboxes = document.querySelectorAll('.rsvp-checkbox') as NodeListOf<HTMLInputElement>;
-                                            const familyMembers = data.guests.filter((g: any) => g.groupId === guest.groupId);
+                                            const familyMembers = (data.guests || []).filter((g: any) => g.groupId === guest.groupId);
 
                                             const attending: string[] = [];
                                             const notAttending: string[] = [];

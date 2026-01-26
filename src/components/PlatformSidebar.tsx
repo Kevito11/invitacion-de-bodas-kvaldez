@@ -12,23 +12,35 @@ const PlatformSidebar: React.FC = () => {
     const { colors, theme, toggleTheme } = useTheme();
     const navigate = useNavigate();
     const location = useLocation();
-    const [savedEvent, setSavedEvent] = useState<{ name: string } | null>(null);
+    const [events, setEvents] = useState<any[]>([]);
     const [isEventsExpanded, setIsEventsExpanded] = useState(true);
 
     useEffect(() => {
         if (user?.username) {
-            const rawData = localStorage.getItem(`invitation_${user.username}`);
+            const rawData = localStorage.getItem(`events_${user.username}`);
             if (rawData) {
                 try {
-                    const parsed = JSON.parse(rawData);
-                    if (parsed && parsed.partner1 && parsed.partner2) {
-                        setSavedEvent({ name: `${parsed.partner1} & ${parsed.partner2}` });
+                    const parsedEvents = JSON.parse(rawData);
+                    if (Array.isArray(parsedEvents)) {
+                        setEvents(parsedEvents);
+                    } else {
+                        setEvents([]);
                     }
                 } catch (e) {
-                    console.error("Error reading invitation for sidebar", e);
+                    console.error("Error reading events for sidebar", e);
+                    setEvents([]);
                 }
             } else {
-                setSavedEvent(null);
+                // Fallback to legacy single event if no list exists
+                const oldData = localStorage.getItem(`invitation_${user.username}`);
+                if (oldData) {
+                    try {
+                        const parsed = JSON.parse(oldData);
+                        setEvents([{ ...parsed, id: parsed.id || 'legacy' }]);
+                    } catch (e) { }
+                } else {
+                    setEvents([]);
+                }
             }
         }
     }, [user]);
@@ -124,18 +136,19 @@ const PlatformSidebar: React.FC = () => {
                     {/* Event List Items */}
                     {isEventsExpanded && (
                         <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.8rem', paddingLeft: '1rem' }}>
-                            {savedEvent ? (
-                                <>
-                                    <li style={{ fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.8rem', opacity: 1, color: colors.text, cursor: 'pointer' }} onClick={() => navigate('/dashboard/event')}>
+                            {events.length > 0 ? (
+                                events.map((ev) => (
+                                    <li
+                                        key={ev.id}
+                                        style={{ fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.8rem', opacity: 1, color: colors.text, cursor: 'pointer' }}
+                                        onClick={() => navigate(`/dashboard/event/${ev.id}`)}
+                                    >
                                         <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: colors.primary }}></div>
                                         <span style={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '150px' }}>
-                                            {savedEvent.name}
+                                            {ev.partner1} & {ev.partner2}
                                         </span>
                                     </li>
-                                    <li style={{ fontSize: '0.8rem', paddingLeft: '1.2rem', opacity: 0.7, fontStyle: 'italic', color: colors.muted }}>
-                                        Invitation
-                                    </li>
-                                </>
+                                ))
                             ) : (
                                 <li style={{ fontSize: '0.85rem', color: colors.muted, fontStyle: 'italic' }}>
                                     Sin eventos activos

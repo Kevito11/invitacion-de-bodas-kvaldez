@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import {
-    Palette, Image, Check, Music, Plus,
+    Palette, Image, Plus,
     Type, Link as LinkIcon, Grid, RotateCcw,
-    Undo, Redo, HelpCircle, ChevronLeft, ChevronRight,
+    Undo, Redo, HelpCircle,
     LayoutTemplate, Monitor, Smartphone
 } from 'lucide-react';
 import type { InvitationData } from '../../types';

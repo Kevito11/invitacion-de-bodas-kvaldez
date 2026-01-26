@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
-import { Search, Upload, Filter, Heart, Repeat } from 'lucide-react';
+import React from 'react';
+import { Search, Upload, Filter, Repeat } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
 const ExploreDesigns: React.FC = () => {
-    const { colors } = useTheme();
+    const { colors, theme } = useTheme();
     // Mock Data for Designs
     const designs = [
         { id: 1, title: 'Simple Border', artist: 'Raven Dubai', colors: ['#D4AF37', '#E6BEAE', '#B5C99A', '#A0C4FF', '#FCA5A5'], image: 'https://images.unsplash.com/photo-1607153721382-72c67295af36?auto=format&fit=crop&w=400&q=80' },
@@ -83,7 +83,7 @@ const ExploreDesigns: React.FC = () => {
                 gap: '2.5rem'
             }}>
                 {designs.map(design => (
-                    <div key={design.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', group: 'card' }}>
+                    <div key={design.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                         {/* Preview */}
                         <div style={{ marginBottom: '1rem', width: '100%', position: 'relative', cursor: 'pointer' }}>
                             <div style={{
@@ -96,7 +96,7 @@ const ExploreDesigns: React.FC = () => {
 
                             <div style={{
                                 width: '100%', aspectRatio: '0.75',
-                                backgroundColor: design.isCustom ? colors.cardBg : (colors.theme === 'dark' ? colors.cardBg : '#F3F4F6'),
+                                backgroundColor: design.isCustom ? colors.cardBg : (theme === 'dark' ? colors.cardBg : '#F3F4F6'),
                                 borderRadius: '2px',
                                 boxShadow: '0 4px 10px rgba(0,0,0,0.1)',
                                 border: design.isCustom ? '2px solid #10B981' : 'none',

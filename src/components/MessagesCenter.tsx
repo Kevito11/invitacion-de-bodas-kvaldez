@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { AlertTriangle, Search, ChevronDown, HelpCircle, Plus } from 'lucide-react';
+import { Search, ChevronDown, HelpCircle, Plus } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+// import { useNavigate } from 'react-router-dom'; // Removed unused
 import { useTheme } from '../context/ThemeContext';
 
 const MessagesCenter: React.FC = () => {
     const { user } = useAuth();
-    const navigate = useNavigate();
+    // const navigate = useNavigate(); // Removed unused
     const { colors, theme } = useTheme();
     const [activeTab, setActiveTab] = useState('inbox');
 

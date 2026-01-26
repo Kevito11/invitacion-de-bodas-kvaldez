@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, User, Heart, Settings, Bell, ChevronDown } from 'lucide-react';
+import { LogOut, Heart, Bell, ChevronDown } from 'lucide-react';
 
 const GlobalPlatformNav: React.FC = () => {
     const { user, logout } = useAuth();
