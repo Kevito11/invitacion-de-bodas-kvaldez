@@ -18,12 +18,13 @@ const THEMES = [
 
 
 const FONTS = [
-    { id: 'playfair', name: 'Elegante (Serif)', family: "'Playfair Display', serif" },
-    { id: 'montserrat', name: 'Moderno (Sans)', family: "'Montserrat', sans-serif" },
-    { id: 'greatvibes', name: 'Romántico (Cursive)', family: "'Great Vibes', cursive" },
-    { id: 'cinzel', name: 'Clásico (Cinzel)', family: "'Cinzel', serif" },
-    { id: 'dancing', name: 'Amistoso (Script)', family: "'Dancing Script', cursive" },
-    { id: 'merriweather', name: 'Legible (Serif)', family: "'Merriweather', serif" }
+    { id: 'greatvibes', name: 'Romántico (Great Vibes)', family: "'Great Vibes', cursive" },
+    { id: 'dancing', name: 'Amistoso (Dancing Script)', family: "'Dancing Script', cursive" },
+    { id: 'alexbrush', name: 'Elegante (Alex Brush)', family: "'Alex Brush', cursive" },
+    { id: 'parisienne', name: 'Clásico (Parisienne)', family: "'Parisienne', cursive" },
+    { id: 'allura', name: 'Fluido (Allura)', family: "'Allura', cursive" },
+    { id: 'pinyon', name: 'Regal (Pinyon Script)', family: "'Pinyon Script', cursive" },
+    { id: 'petitformal', name: 'Fino (Petit Formal)', family: "'Petit Formal Script', cursive" }
 ];
 
 // Helper for URL processing (Shared relative to utils import)
@@ -97,7 +98,7 @@ const EditorPanel: React.FC<EditorPanelProps> = ({ data, onChange }) => {
                                 </span>
                             </p>
 
-                            {/* --- Minimalist Upload Area (Firebase) --- */}
+                            {/* --- Minimalist Upload Area (Supabase) --- */}
                             <div style={{ marginBottom: '2rem' }}>
                                 <input
                                     type="file"

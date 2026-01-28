@@ -61,7 +61,7 @@ const GuestInvitation: React.FC = () => {
                                 venueAddress: parsed.a || 'Dirección',
                                 message: parsed.m || 'Te invitamos a nuestra boda.',
                                 theme: parsed.th || 'gold',
-                                font: parsed.f || 'playfair',
+                                font: parsed.f || 'greatvibes',
                                 imageUrl: parsed.i || '',
                                 audioUrl: parsed.au || '',
                                 whatsappNumber: parsed.w || '',
@@ -105,7 +105,7 @@ const GuestInvitation: React.FC = () => {
                 message: getParam('m', 'Te invitamos a nuestra boda.'),
                 theme: getParam('th', 'gold'),
                 imageUrl: getParam('img', ''),
-                font: getParam('font', 'playfair'),
+                font: getParam('font', 'greatvibes'),
                 audioUrl: getParam('audio', ''),
                 whatsappNumber: getParam('wa', ''),
                 gallery: searchParams.getAll('gallery')

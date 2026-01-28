@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useEvents } from '../context/EventsContext';
 import { useNavigate } from 'react-router-dom';
 import { Calendar } from 'lucide-react';
 
@@ -8,51 +9,24 @@ const EventsTable: React.FC = () => {
     const [selectedEvents, setSelectedEvents] = useState<string[]>([]);
     const { user } = useAuth();
     const { colors, theme } = useTheme();
+    const { events: rawEvents, deleteEvents } = useEvents();
     const navigate = useNavigate();
-    const [events, setEvents] = useState<any[]>([]);
 
-    // Load events from new array structure
-    useEffect(() => {
-        if (user?.username) {
-            const rawData = localStorage.getItem(`events_${user.username}`);
-            if (rawData) {
-                try {
-                    const parsedEvents = JSON.parse(rawData);
-                    if (Array.isArray(parsedEvents)) {
-                        const mappedEvents = parsedEvents.map((ev: any) => ({
-                            id: ev.id,
-                            title: `Boda de ${ev.partner1} & ${ev.partner2}`,
-                            originalData: ev,
-                            type: 'Invitación + Confirmación de asistencia',
-                            image: ev.imageUrl || null,
-                            created: new Date().toLocaleDateString('es-ES'), // Could add created field later
-                            eventDate: ev.date ? new Date(ev.date).toLocaleDateString('es-ES') : 'Por definir',
-                            lastDelivery: 'Sin enviar',
-                            openRate: 0,
-                            responseRate: 0,
-                            status: 'Modo de prueba'
-                        }));
-                        setEvents(mappedEvents);
-                    }
-                } catch (e) {
-                    console.error("Error loading events", e);
-                    setEvents([]);
-                }
-            } else {
-                // Fallback check for migration if user goes straight here
-                const oldData = localStorage.getItem(`invitation_${user.username}`);
-                if (oldData) {
-                    // We don't auto-migrate here, let Dashboard handle it or just show empty.
-                    // Better to behave empty to avoid conflict, user should "Create" or "Edit"
-                    setEvents([]);
-                }
-            }
-        }
-    }, [user]);
+    const mappedEvents = rawEvents.map((ev: any) => ({
+        id: ev.id,
+        title: `Boda de ${ev.partner1} & ${ev.partner2}`,
+        originalData: ev,
+        type: 'Invitación + Confirmación de asistencia',
+        image: ev.imageUrl || null,
+        created: new Date().toLocaleDateString('es-ES'), // Could add created field later
+        eventDate: ev.date ? new Date(ev.date).toLocaleDateString('es-ES') : 'Por definir',
+        lastDelivery: 'Sin enviar',
+        openRate: 0,
+        responseRate: 0,
+        status: 'Modo de prueba'
+    }));
 
-
-
-
+    const events = mappedEvents;
 
     const toggleSelectAll = (checked: boolean) => {
         if (checked) {
@@ -74,38 +48,8 @@ const EventsTable: React.FC = () => {
         if (selectedEvents.length === 0 || !user?.username) return;
 
         if (window.confirm(`¿Estás seguro de que deseas eliminar ${selectedEvents.length} evento(s)? Esta acción no se puede deshacer.`)) {
-            // Get current events from localStorage
-            const rawData = localStorage.getItem(`events_${user.username}`);
-            if (rawData) {
-                try {
-                    const allEvents = JSON.parse(rawData);
-                    // Filter out deleted events
-                    const updatedEvents = allEvents.filter((ev: any) => !selectedEvents.includes(ev.id));
-
-                    // Save back to localStorage
-                    localStorage.setItem(`events_${user.username}`, JSON.stringify(updatedEvents));
-
-                    // Update local state
-                    const mappedEvents = updatedEvents.map((ev: any) => ({
-                        id: ev.id,
-                        title: `Boda de ${ev.partner1} & ${ev.partner2}`,
-                        originalData: ev,
-                        type: 'Invitación + Confirmación de asistencia',
-                        image: ev.imageUrl || null,
-                        created: new Date().toLocaleDateString('es-ES'),
-                        eventDate: ev.date ? new Date(ev.date).toLocaleDateString('es-ES') : 'Por definir',
-                        lastDelivery: 'Sin enviar',
-                        openRate: 0,
-                        responseRate: 0,
-                        status: 'Modo de prueba'
-                    }));
-                    setEvents(mappedEvents);
-                    setSelectedEvents([]);
-
-                } catch (e) {
-                    console.error("Error deleting events", e);
-                }
-            }
+            deleteEvents(selectedEvents);
+            setSelectedEvents([]);
         }
     };
 

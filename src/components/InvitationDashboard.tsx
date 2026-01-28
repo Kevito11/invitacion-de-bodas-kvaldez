@@ -18,6 +18,7 @@ import {
     Eye,
     Check
 } from 'lucide-react';
+import { useEvents } from '../context/EventsContext';
 import { useParams } from 'react-router-dom';
 
 
@@ -28,6 +29,7 @@ const InvitationDashboard: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const [currentStep, setCurrentStep] = useState(0);
     const [isSaved, setIsSaved] = useState(true);
+    const { fetchEvents } = useEvents();
 
     const [data, setData] = useState<InvitationData>({
         partner1: 'María',
@@ -41,7 +43,7 @@ const InvitationDashboard: React.FC = () => {
         imageUrl: '',
         backgroundImageUrl: '',
         backgroundImages: [],
-        font: 'playfair',
+        font: 'greatvibes',
         audioUrl: '',
         dressCode: 'Formal',
         dressCodeDetails: '',
@@ -66,6 +68,7 @@ const InvitationDashboard: React.FC = () => {
                         parsedOld.id = 'legacy-event-1';
                         allEvents = [parsedOld];
                         localStorage.setItem(`events_${user.username}`, JSON.stringify(allEvents));
+                        fetchEvents(); // Sync context after migration
                     } catch (e) { console.error(e); }
                 }
             }
@@ -99,6 +102,7 @@ const InvitationDashboard: React.FC = () => {
             }
 
             localStorage.setItem(`events_${user.username}`, JSON.stringify(allEvents));
+            fetchEvents(); // Update global state
             setIsSaved(true);
         }
     };
@@ -126,6 +130,75 @@ const InvitationDashboard: React.FC = () => {
         { id: 'delivery', label: 'ENTREGA', icon: Send, component: StepGuests }, // Mapping Guests to Delivery for now
         { id: 'tracking', label: 'SEGUIMIENTO', icon: Users, component: StepSend }, // Mapping Send to Tracking (placeholder)
     ];
+
+    // History Management
+    const [history, setHistory] = useState<InvitationData[]>([data]);
+    const [historyIndex, setHistoryIndex] = useState(0);
+
+    // Debounce history updates to avoid one-char states
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            // If data is different from current history head, push it
+            // We need to compare carefully or just trust the editing flow
+            if (JSON.stringify(history[historyIndex]) !== JSON.stringify(data)) {
+                const newHistory = history.slice(0, historyIndex + 1);
+                newHistory.push(data);
+                // Limit history size if needed, e.g., 50 steps
+                if (newHistory.length > 50) newHistory.shift();
+
+                setHistory(newHistory);
+                setHistoryIndex(newHistory.length - 1);
+            }
+        }, 500); // 500ms debounce for history
+        return () => clearTimeout(timer);
+    }, [data, history, historyIndex]);
+
+    const undo = () => {
+        if (historyIndex > 0) {
+            const prevIndex = historyIndex - 1;
+            setHistoryIndex(prevIndex);
+            setData(history[prevIndex]);
+            setIsSaved(false);
+        }
+    };
+
+    const redo = () => {
+        if (historyIndex < history.length - 1) {
+            const nextIndex = historyIndex + 1;
+            setHistoryIndex(nextIndex);
+            setData(history[nextIndex]);
+            setIsSaved(false);
+        }
+    };
+
+    const reset = () => {
+        if (window.confirm("¿Seguro que quieres reiniciar? Se borrarán todos los campos.")) {
+            const initialData: InvitationData = {
+                id: data.id, // Keep ID
+                partner1: '',
+                partner2: '',
+                date: '',
+                time: '',
+                venueName: '',
+                venueAddress: '',
+                message: '',
+                theme: 'gold',
+                imageUrl: '',
+                backgroundImageUrl: '',
+                backgroundImages: [],
+                font: 'greatvibes',
+                audioUrl: '',
+                dressCode: 'Formal',
+                dressCodeDetails: '',
+                dressCodeInspirationUrl: '',
+                mapUrl: '',
+                guests: [],
+                mediaLibrary: []
+            };
+            setData(initialData);
+            // Will be added to history by effect
+        }
+    };
 
     const ActiveComponent = DESIGN_STEPS[currentStep].component;
 
@@ -187,13 +260,19 @@ const InvitationDashboard: React.FC = () => {
             {/* Main Content Area */}
             <div style={{ flex: 1, overflow: 'hidden', backgroundColor: '#F3F4F6' }}>
                 {currentStep === 2 ? ( // Preview Step needs special handling to be full height without padding if needed, or structured same
-                    <div style={{ height: '100%', overflowY: 'auto', padding: '2rem' }}>
-                        <div style={{ maxWidth: '1000px', margin: '0 auto', backgroundColor: 'white', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
-                            <InvitationPreview data={data} />
+                    <div style={{ height: '100%', overflowY: 'auto', padding: '0', backgroundColor: '#333' }}>
+                        <div style={{ width: '100%', height: '100%', margin: '0 auto', backgroundColor: 'white', overflow: 'hidden' }}>
+                            <InvitationPreview data={data} isGuest={true} />
                         </div>
                     </div>
                 ) : (
-                    <ActiveComponent data={data} onChange={handleDataChange} />
+                    <ActiveComponent
+                        data={data}
+                        onChange={handleDataChange}
+                        onUndo={undo}
+                        onRedo={redo}
+                        onReset={reset}
+                    />
                 )}
             </div>
 

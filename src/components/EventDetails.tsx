@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useEvents } from '../context/EventsContext';
 import {
     Edit2, ChevronRight, HelpCircle, Download, Copy, Archive,
     Check, Image as ImageIcon
@@ -11,38 +12,46 @@ const EventDetails: React.FC = () => {
     const { user } = useAuth();
     const { colors, theme } = useTheme();
     const navigate = useNavigate();
+    const { id } = useParams<{ id: string }>();
+    const { events: allEvents } = useEvents();
     const [event, setEvent] = useState<any>(null);
 
     // Fetch event data
     useEffect(() => {
-        if (user?.username) {
-            const rawData = localStorage.getItem(`invitation_${user.username}`);
-            if (rawData) {
-                try {
-                    const parsed = JSON.parse(rawData);
-                    setEvent({
-                        ...parsed,
-                        title: `Boda de ${parsed.partner1} & ${parsed.partner2}`,
-                        dateFormatted: parsed.date ? new Date(parsed.date).toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : 'Fecha por definir',
-                        time: parsed.time || '4:30 p.m.',
-                        location: parsed.venueAddress || 'Dirección por definir',
-                        hostEmail: user?.username ? `${user.username.toLowerCase()}@hotmail.com` : 'email@example.com',
-                        image: parsed.imageUrl,
-                        // Mock stats
-                        openRate: 100,
-                        openedCount: 1,
-                        clickedCount: 139,
-                        responseRate: 99,
-                        attending: 114,
-                        notAttending: 26,
-                        pending: 1
-                    });
-                } catch (e) {
-                    console.error("Error loading event", e);
-                }
+        if (id && allEvents.length > 0) {
+            const foundEvent = allEvents.find((e: any) => e.id === id);
+
+            if (foundEvent) {
+                setEvent({
+                    ...foundEvent,
+                    title: `Boda de ${foundEvent.partner1} & ${foundEvent.partner2}`,
+                    dateFormatted: foundEvent.date ? new Date(foundEvent.date).toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : 'Fecha por definir',
+                    time: foundEvent.time || '4:30 p.m.',
+                    location: foundEvent.venueAddress || 'Dirección por definir',
+                    hostEmail: user?.username ? `${user.username.toLowerCase()}@hotmail.com` : 'email@example.com',
+                    image: foundEvent.imageUrl || (foundEvent.mediaLibrary?.[0] || ''),
+                    // Real stats
+                    clickedCount: foundEvent.guests?.filter((g: any) => g.status === 'confirmed' || g.status === 'declined').length || 0,
+                    responseRate: (foundEvent.guests?.length > 0)
+                        ? Math.round(((foundEvent.guests.filter((g: any) => g.status === 'confirmed' || g.status === 'declined').length) / foundEvent.guests.length) * 100)
+                        : 0,
+                    attending: foundEvent.guests?.filter((g: any) => g.status === 'confirmed').length || 0,
+                    notAttending: foundEvent.guests?.filter((g: any) => g.status === 'declined').length || 0,
+                    pending: foundEvent.guests?.filter((g: any) => g.status === 'pending').length || 0
+                });
+
+                // Set opened count to be at least the clicked count (heuristic since we lack tracking)
+                setEvent((prev: any) => ({
+                    ...prev,
+                    openedCount: Math.max(prev.openedCount, prev.clickedCount)
+                }));
+            } else {
+                // If not found in array, maybe try legacy fallback ONLY if ID matches legacy ID?
+                // Or just don't load.
+                console.warn("Event not found with ID:", id);
             }
         }
-    }, [user]);
+    }, [id, allEvents, user]);
 
     if (!event) return null;
 
@@ -100,7 +109,7 @@ const EventDetails: React.FC = () => {
                     <div style={{ backgroundColor: cardBg, border: `1px solid ${borderColor}`, borderRadius: '4px', overflow: 'hidden' }}>
                         <div style={{ padding: '1rem', borderBottom: `1px solid ${borderColor}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: '1.2rem', margin: 0, color: colors.text }}>Vista previa</h3>
-                            <button onClick={() => navigate('/dashboard/event/edit')} style={{ background: 'none', border: `1px solid ${borderColor}`, borderRadius: '4px', padding: '0.3rem 0.8rem', display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.75rem', color: brandColor, cursor: 'pointer' }}>
+                            <button onClick={() => navigate(`/dashboard/event/edit/${event.id}`)} style={{ background: 'none', border: `1px solid ${borderColor}`, borderRadius: '4px', padding: '0.3rem 0.8rem', display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.75rem', color: brandColor, cursor: 'pointer' }}>
                                 Editar el diseño <ChevronRight size={14} />
                             </button>
                         </div>
@@ -116,9 +125,7 @@ const EventDetails: React.FC = () => {
                             </div>
                         </div>
                         <div style={{ padding: '1rem', borderTop: `1px solid ${borderColor}`, display: 'flex', justifyContent: 'center', gap: '1rem' }}>
-                            <button style={{ backgroundColor: brandColor, color: 'white', border: 'none', borderRadius: '20px', padding: '0.4rem 1rem', fontSize: '0.75rem', fontWeight: 600 }}>Frente de la tarjeta</button>
-                            <button style={{ background: 'none', color: colors.muted, border: 'none', fontSize: '0.75rem', cursor: 'pointer' }}>Reverso de la tarjeta</button>
-                            <button style={{ background: 'none', color: colors.muted, border: 'none', fontSize: '0.75rem', cursor: 'pointer' }}>Sobre</button>
+                            {/* Buttons removed as requested */}
                         </div>
                         <div style={{ padding: '1.5rem', textAlign: 'center', borderTop: `1px solid ${borderColor}` }}>
                             <div style={{ fontFamily: "'Playfair Display', serif", fontSize: '1.1rem', color: '#D4AF37' }}>Fairytale Blossoms</div>
@@ -148,9 +155,7 @@ const EventDetails: React.FC = () => {
                     <div style={{ backgroundColor: cardBg, border: `1px solid ${borderColor}`, borderRadius: '4px' }}>
                         <div style={{ padding: '1rem', borderBottom: `1px solid ${borderColor}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: '1.2rem', margin: 0, color: colors.text }}>Detalles</h3>
-                            <button style={{ background: 'none', border: `1px solid ${borderColor}`, borderRadius: '4px', padding: '0.3rem 0.8rem', display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.75rem', color: colors.muted, cursor: 'pointer' }}>
-                                Editar detalles <ChevronRight size={14} />
-                            </button>
+                            {/* Edit Details button removed */}
                         </div>
                         <div style={{ padding: '2rem', display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '2rem' }}>
                             <div>
@@ -206,7 +211,36 @@ const EventDetails: React.FC = () => {
                                             <span style={{ fontWeight: 600 }}>{event.clickedCount}</span>
                                         </div>
                                     </div>
-                                    <div style={{ width: '80px', height: '80px', borderRadius: '50%', border: '12px solid #E5E7EB', borderTopColor: '#93C5FD', borderRightColor: '#93C5FD', borderLeftColor: '#D4AF37', transform: 'rotate(45deg)' }}></div>
+                                    {/* Dynamic Donut Chart for Delivery */}
+                                    {(() => {
+                                        const total = event.guests?.length || 0;
+                                        if (total === 0) {
+                                            return <div style={{ width: '80px', height: '80px', borderRadius: '50%', border: '12px solid #E5E7EB' }}></div>;
+                                        }
+                                        // Segments: 
+                                        // 1. Responded (Blue)
+                                        // 2. Opened but not Responded (Gold) -> openedCount - clickedCount
+                                        // 3. Unopened (Gray) -> Rest
+
+                                        const pResponded = (event.clickedCount / total) * 100;
+                                        const pOpenedOnly = ((event.openedCount - event.clickedCount) / total) * 100; // Assuming opened includes clicked
+
+                                        const stop1 = pResponded;
+                                        const stop2 = stop1 + Math.max(0, pOpenedOnly);
+
+                                        return (
+                                            <div style={{
+                                                width: '80px', height: '80px', borderRadius: '50%',
+                                                background: `conic-gradient(#93C5FD 0% ${stop1}%, #D4AF37 ${stop1}% ${stop2}%, #E5E7EB ${stop2}% 100%)`,
+                                                // Make it a donut with a mask or just a circle. The original was a border donut.
+                                                // To make it look like a donut with conic-gradient, we need a mask or an inner white circle.
+                                                position: 'relative',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                            }}>
+                                                <div style={{ width: '56px', height: '56px', backgroundColor: 'white', borderRadius: '50%' }}></div>
+                                            </div>
+                                        );
+                                    })()}
                                 </div>
                                 <div style={{ marginTop: '1.5rem', textAlign: 'right' }}>
                                     <span style={{ fontSize: '0.8rem', color: brandColor, cursor: 'pointer' }}>Agregar más destinatarios</span>
@@ -250,10 +284,24 @@ const EventDetails: React.FC = () => {
                                         </div>
                                     </div>
                                     {/* Pie Chart Simulation with Conic Gradient */}
-                                    <div style={{
-                                        width: '80px', height: '80px', borderRadius: '50%',
-                                        background: `conic-gradient(#10B981 0% 80%, #EF4444 80% 98%, #D1D5DB 98% 100%)`
-                                    }}></div>
+                                    {(() => {
+                                        const total = (event.attending || 0) + (event.notAttending || 0) + (event.pending || 0);
+                                        if (total === 0) {
+                                            return <div style={{ width: '80px', height: '80px', borderRadius: '50%', backgroundColor: '#E5E7EB' }}></div>;
+                                        }
+                                        const pAttending = (event.attending / total) * 100;
+                                        const pNotAttending = (event.notAttending / total) * 100;
+                                        // Stops
+                                        const stop1 = pAttending;
+                                        const stop2 = stop1 + pNotAttending;
+
+                                        return (
+                                            <div style={{
+                                                width: '80px', height: '80px', borderRadius: '50%',
+                                                background: `conic-gradient(#10B981 0% ${stop1}%, #EF4444 ${stop1}% ${stop2}%, #D1D5DB ${stop2}% 100%)`
+                                            }}></div>
+                                        );
+                                    })()}
                                 </div>
 
                                 <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: brandColor }}>

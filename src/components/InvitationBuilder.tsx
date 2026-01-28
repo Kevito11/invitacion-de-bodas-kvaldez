@@ -26,7 +26,7 @@ const InvitationBuilder: React.FC = () => {
         imageUrl: '',
         backgroundImageUrl: '', // Initial state
         backgroundImages: [], // Initial empty array for slideshow
-        font: 'playfair',
+        font: 'greatvibes',
         audioUrl: '',
         dressCode: 'Formal',
         dressCodeDetails: '',
@@ -315,7 +315,7 @@ const InvitationBuilder: React.FC = () => {
                     backgroundSize: '20px 20px'
                 }}>
                     <MobileMockup scale={0.85}>
-                        <InvitationPreview data={data} />
+                        <InvitationPreview data={data} isMobilePreview={true} />
                     </MobileMockup>
                 </div>
             </div>

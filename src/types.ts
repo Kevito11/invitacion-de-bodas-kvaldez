@@ -21,6 +21,14 @@ export interface InvitationData {
     dressCodeInspirationUrl?: string; // Optional URL for examples
     guests?: Guest[]; // Guest list integrated into design
     mediaLibrary?: string[]; // Centralized list of uploaded/linked images
+    layout?: 'scroll' | 'slider' | 'classic'; // Visual structure of the invitation
+    envelope?: {
+        enabled: boolean;
+        type: 'classic' | 'pointed' | 'square' | 'rounded';
+        material: 'paper' | 'linen' | 'velvet' | 'cardstock';
+        color: string;
+        finish?: 'matte' | 'glossy' | 'metallic';
+    };
 }
 
 export type RSVPStatus = 'pending' | 'confirmed' | 'declined';

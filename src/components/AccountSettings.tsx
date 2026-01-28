@@ -3,12 +3,14 @@ import { useAuth } from '../context/AuthContext';
 import { Settings, CreditCard, Mail, Tag, List, Globe, Edit2, Plus, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
+import { useEvents } from '../context/EventsContext';
 import EventsTable from './EventsTable';
 
 const AccountSettings: React.FC = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
     const { colors, theme } = useTheme();
+    const { clearAllEvents } = useEvents();
     const [activeTab, setActiveTab] = useState('general');
 
     // Mock Notification State
@@ -134,13 +136,43 @@ const AccountSettings: React.FC = () => {
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
 
-            {activeTab === 'events' && (
-                <EventsTable />
-            )}
-        </div>
+                    {/* Danger Zone */}
+                    <div style={{ backgroundColor: theme === 'dark' ? 'rgba(239, 68, 68, 0.1)' : '#FEF2F2', border: `1px solid ${theme === 'dark' ? '#EF4444' : '#FECACA'}`, borderRadius: '4px', padding: '2rem' }}>
+                        <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: '1.4rem', color: '#EF4444', margin: '0 0 1rem 0' }}>Zona de Peligro</h3>
+                        <p style={{ color: colors.muted, marginBottom: '1.5rem', fontSize: '0.9rem' }}>
+                            Estas acciones son destructivas y no se pueden deshacer.
+                        </p>
+                        <div style={{ display: 'flex', gap: '1rem' }}>
+                            <button
+                                onClick={() => {
+                                    if (window.confirm('¿Estás SEGURO de que quieres eliminar TODOS tus eventos? Esta acción borrará permanentemente todas las invitaciones y datos asociados. No se puede deshacer.')) {
+                                        clearAllEvents();
+                                        alert('Todos los eventos han sido eliminados.');
+                                    }
+                                }}
+                                style={{
+                                    backgroundColor: '#EF4444', color: 'white',
+                                    border: 'none', padding: '0.8rem 1.5rem',
+                                    borderRadius: '4px', cursor: 'pointer',
+                                    fontWeight: 700, fontSize: '0.8rem',
+                                    letterSpacing: '0.5px'
+                                }}
+                            >
+                                ELIMINAR TODOS LOS EVENTOS
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )
+            }
+
+            {
+                activeTab === 'events' && (
+                    <EventsTable />
+                )
+            }
+        </div >
     );
 };
 

@@ -1,49 +1,20 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useEvents } from '../context/EventsContext';
 import {
     User, Search, MessageSquare, HelpCircle,
     Inbox, Globe, Smartphone, LogOut, ChevronDown, ChevronRight, Plus, Moon, Sun, Settings, LayoutDashboard, FolderOpen
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 const PlatformSidebar: React.FC = () => {
     const { user, logout } = useAuth();
     const { colors, theme, toggleTheme } = useTheme();
     const navigate = useNavigate();
     const location = useLocation();
-    const [events, setEvents] = useState<any[]>([]);
+    const { events } = useEvents();
     const [isEventsExpanded, setIsEventsExpanded] = useState(true);
-
-    useEffect(() => {
-        if (user?.username) {
-            const rawData = localStorage.getItem(`events_${user.username}`);
-            if (rawData) {
-                try {
-                    const parsedEvents = JSON.parse(rawData);
-                    if (Array.isArray(parsedEvents)) {
-                        setEvents(parsedEvents);
-                    } else {
-                        setEvents([]);
-                    }
-                } catch (e) {
-                    console.error("Error reading events for sidebar", e);
-                    setEvents([]);
-                }
-            } else {
-                // Fallback to legacy single event if no list exists
-                const oldData = localStorage.getItem(`invitation_${user.username}`);
-                if (oldData) {
-                    try {
-                        const parsed = JSON.parse(oldData);
-                        setEvents([{ ...parsed, id: parsed.id || 'legacy' }]);
-                    } catch (e) { }
-                } else {
-                    setEvents([]);
-                }
-            }
-        }
-    }, [user]);
 
     const handleLogout = () => {
         logout();
