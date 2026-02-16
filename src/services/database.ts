@@ -42,3 +42,35 @@ export const getInvitationFromDb = async (id: string): Promise<InvitationData | 
         return null;
     }
 };
+
+/**
+ * Updates a specific guest's status and message.
+ */
+export const updateGuestStatus = async (invitationId: string, guestId: string, status: string, message?: string): Promise<boolean> => {
+    try {
+        const { getInvitationFromDb } = await import('./database'); // Self-import to use the existing getter
+        // 1. Get current data
+        const currentData = await getInvitationFromDb(invitationId);
+        if (!currentData || !currentData.guests) return false;
+
+        // 2. Find and update guest
+        const updatedGuests = (currentData.guests as any[]).map(g => {
+            if (g.id === guestId) {
+                return { ...g, status: status, message: message || g.message };
+            }
+            return g;
+        });
+
+        // 3. Update the record
+        const { error } = await supabase
+            .from('invitations')
+            .update({ data: { ...currentData, guests: updatedGuests } })
+            .eq('id', invitationId);
+
+        if (error) throw error;
+        return true;
+    } catch (error) {
+        console.error("Error updating guest status:", error);
+        return false;
+    }
+};

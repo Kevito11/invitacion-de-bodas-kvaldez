@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Settings, CreditCard, Mail, Tag, List, Globe, Edit2, Plus, Check } from 'lucide-react';
+import { Settings, CreditCard, Mail, Tag, List, Globe, Edit2, Plus, Check, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { useEvents } from '../context/EventsContext';
@@ -10,8 +10,11 @@ const AccountSettings: React.FC = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
     const { colors, theme } = useTheme();
-    const { clearAllEvents } = useEvents();
+    const { clearAllEvents, events } = useEvents(); // Get events from context
     const [activeTab, setActiveTab] = useState('general');
+
+    // Tag View State
+    const [selectedViewTag, setSelectedViewTag] = useState<string | null>(null);
 
     // Mock Notification State
     const [notifications, setNotifications] = useState({
@@ -29,6 +32,36 @@ const AccountSettings: React.FC = () => {
 
     const toggleNotify = (key: keyof typeof notifications) => {
         setNotifications(prev => ({ ...prev, [key]: !prev[key] }));
+    };
+
+    // Group Events by Tag
+    const groupedTags = useMemo(() => {
+        const groups: Record<string, any[]> = {};
+        // Add "Sin Etiqueta" group
+        groups['Sin Etiqueta'] = [];
+
+        events.forEach(ev => {
+            const tag = ev.selectedTag || 'Sin Etiqueta';
+            if (!groups[tag]) {
+                groups[tag] = [];
+            }
+            groups[tag].push(ev);
+        });
+
+        // Remove empty "Sin Etiqueta" if no events are untagged (optional, keeping it for clarity mostly)
+        if (groups['Sin Etiqueta'].length === 0) {
+            delete groups['Sin Etiqueta'];
+        }
+
+        return groups;
+    }, [events]);
+
+    const handleTagClick = (tagName: string) => {
+        setSelectedViewTag(tagName);
+    };
+
+    const handleBackToTags = () => {
+        setSelectedViewTag(null);
     };
 
     return (
@@ -65,7 +98,7 @@ const AccountSettings: React.FC = () => {
                 <TabButton active={activeTab === 'general'} icon={<Settings size={16} />} label="General" onClick={() => setActiveTab('general')} colors={colors} theme={theme} />
                 <TabButton active={activeTab === 'billing'} icon={<CreditCard size={16} />} label="Facturación" onClick={() => setActiveTab('billing')} colors={colors} theme={theme} />
                 <TabButton active={activeTab === 'events'} icon={<Mail size={16} />} label="Eventos" onClick={() => setActiveTab('events')} colors={colors} theme={theme} />
-                <TabButton active={activeTab === 'tags'} icon={<Tag size={16} />} label="Etiquetas" onClick={() => setActiveTab('tags')} colors={colors} theme={theme} />
+                <TabButton active={activeTab === 'tags'} icon={<Tag size={16} />} label="Etiquetas" onClick={() => { setActiveTab('tags'); setSelectedViewTag(null); }} colors={colors} theme={theme} />
                 <TabButton active={activeTab === 'fields'} icon={<List size={16} />} label="Campos personalizados" onClick={() => setActiveTab('fields')} colors={colors} theme={theme} />
                 <TabButton active={activeTab === 'langs'} icon={<Globe size={16} />} label="Idiomas" onClick={() => setActiveTab('langs')} colors={colors} theme={theme} />
             </div>
@@ -164,14 +197,103 @@ const AccountSettings: React.FC = () => {
                         </div>
                     </div>
                 </div>
-            )
-            }
+            )}
 
             {
                 activeTab === 'events' && (
                     <EventsTable />
                 )
             }
+
+            {/* NEW TAGS TAB */}
+            {activeTab === 'tags' && (
+                <div>
+                    {!selectedViewTag ? (
+                        <>
+                            <div style={{ marginBottom: '2rem' }}>
+                                <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: '1.5rem', color: colors.text, marginBottom: '0.5rem' }}>
+                                    Etiquetas de Eventos
+                                </h3>
+                                <p style={{ color: colors.muted, fontSize: '0.9rem' }}>
+                                    Gestiona y visualiza tus eventos agrupados por etiquetas.
+                                </p>
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1.5rem' }}>
+                                {Object.keys(groupedTags).length > 0 ? (
+                                    Object.keys(groupedTags).map(tagName => (
+                                        <div
+                                            key={tagName}
+                                            onClick={() => handleTagClick(tagName)}
+                                            style={{
+                                                backgroundColor: colors.cardBg,
+                                                border: `1px solid ${colors.border}`,
+                                                borderRadius: '8px',
+                                                padding: '1.5rem',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.2s ease',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                gap: '1rem',
+                                                boxShadow: '0 2px 5px rgba(0,0,0,0.05)'
+                                            }}
+                                            onMouseOver={(e) => {
+                                                e.currentTarget.style.transform = 'translateY(-3px)';
+                                                e.currentTarget.style.boxShadow = '0 5px 15px rgba(0,0,0,0.1)';
+                                            }}
+                                            onMouseOut={(e) => {
+                                                e.currentTarget.style.transform = 'translateY(0)';
+                                                e.currentTarget.style.boxShadow = '0 2px 5px rgba(0,0,0,0.05)';
+                                            }}
+                                        >
+                                            <Tag size={32} color={theme === 'dark' ? '#34D399' : '#059669'} />
+                                            <div style={{ textAlign: 'center' }}>
+                                                <h4 style={{ margin: '0 0 0.5rem', color: colors.text, fontSize: '1.1rem' }}>{tagName}</h4>
+                                                <span style={{
+                                                    backgroundColor: theme === 'dark' ? 'rgba(52, 211, 153, 0.1)' : '#ECFDF5',
+                                                    color: theme === 'dark' ? '#34D399' : '#059669',
+                                                    padding: '0.3rem 0.8rem',
+                                                    borderRadius: '20px',
+                                                    fontSize: '0.85rem',
+                                                    fontWeight: 600
+                                                }}>
+                                                    {groupedTags[tagName].length} {groupedTags[tagName].length === 1 ? 'Evento' : 'Eventos'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '3rem', color: colors.muted, border: `1px dashed ${colors.border}`, borderRadius: '8px' }}>
+                                        <Tag size={48} style={{ opacity: 0.3, marginBottom: '1rem' }} />
+                                        <p>No tienes eventos con etiquetas aún.</p>
+                                    </div>
+                                )}
+                            </div>
+                        </>
+                    ) : (
+                        <div>
+                            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '2rem', gap: '1rem' }}>
+                                <button
+                                    onClick={handleBackToTags}
+                                    style={{
+                                        background: 'none', border: 'none', cursor: 'pointer',
+                                        display: 'flex', alignItems: 'center', gap: '0.5rem',
+                                        color: colors.muted, fontSize: '0.9rem', fontWeight: 600
+                                    }}
+                                >
+                                    <ArrowLeft size={18} /> Volver
+                                </button>
+                                <h2 style={{ margin: 0, fontSize: '1.5rem', color: colors.text }}>
+                                    Eventos con etiqueta: <span style={{ color: theme === 'dark' ? '#34D399' : '#059669' }}>{selectedViewTag}</span>
+                                </h2>
+                            </div>
+                            <EventsTable events={groupedTags[selectedViewTag]} />
+                        </div>
+                    )}
+                </div>
+            )}
         </div >
     );
 };

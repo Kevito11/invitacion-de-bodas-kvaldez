@@ -1,12 +1,14 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 import { Plus } from 'lucide-react';
 import EventsTable from './EventsTable';
 
 const Dashboard: React.FC = () => {
     const navigate = useNavigate();
     const { colors } = useTheme();
+    const { t } = useLanguage();
 
     return (
         <div style={{ fontFamily: "'Montserrat', sans-serif" }}>
@@ -17,9 +19,9 @@ const Dashboard: React.FC = () => {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '3rem' }}>
                     <div>
                         <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: '2.5rem', fontWeight: 700, color: colors.text, margin: '0 0 0.5rem' }}>
-                            Mis Eventos
+                            {t('dashboard.title')}
                         </h1>
-                        <p style={{ color: colors.muted, fontSize: '1rem' }}>Gestiona tus diseños y lista de invitados.</p>
+                        <p style={{ color: colors.muted, fontSize: '1rem' }}>{t('dashboard.subtitle')}</p>
                     </div>
                     <button
                         onClick={() => navigate('/create')}
@@ -34,7 +36,7 @@ const Dashboard: React.FC = () => {
                         onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
                         onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
                     >
-                        <Plus size={18} /> Crear Nuevo
+                        <Plus size={18} /> {t('dashboard.create_new')}
                     </button>
                 </div>
 

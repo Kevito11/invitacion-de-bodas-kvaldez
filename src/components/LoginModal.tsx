@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { ArrowRight, X, User, Lock, Loader2 } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
 
 interface LoginModalProps {
     isOpen: boolean;
@@ -9,10 +10,11 @@ interface LoginModalProps {
 }
 
 const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
+    const { t } = useLanguage();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
-    const navigate = useNavigate(); // Hook for navigation
+    const navigate = useNavigate();
 
     const { login, isLoading } = useAuth();
 
@@ -26,7 +28,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
             onClose();
             navigate('/dashboard');
         } else {
-            setError('Credenciales incorrectas. Intenta de nuevo.');
+            setError(t('auth.login.error'));
         }
     };
 
@@ -55,7 +57,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                 </button>
 
                 <h2 style={{ textAlign: 'center', color: '#2D2A26', marginBottom: '2rem', fontFamily: "'Playfair Display', serif" }}>
-                    Acceso Administrativo
+                    {t('auth.login.title')}
                 </h2>
 
                 {error && (
@@ -69,7 +71,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
 
                 <form onSubmit={handleSubmit}>
                     <div style={{ marginBottom: '1.5rem' }}>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#4B5563', fontSize: '0.9rem' }}>Usuario</label>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#4B5563', fontSize: '0.9rem' }}>{t('auth.login.user')}</label>
                         <div style={{ position: 'relative' }}>
                             <User size={20} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
                             <input
@@ -82,14 +84,14 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                                     fontSize: '1rem', outline: 'none', transition: 'border-color 0.2s',
                                     boxSizing: 'border-box'
                                 }}
-                                placeholder="Usuario"
+                                placeholder={t('auth.login.user')}
                                 required
                             />
                         </div>
                     </div>
 
                     <div style={{ marginBottom: '2rem' }}>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#4B5563', fontSize: '0.9rem' }}>Contraseña</label>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#4B5563', fontSize: '0.9rem' }}>{t('auth.login.pass')}</label>
                         <div style={{ position: 'relative' }}>
                             <Lock size={20} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
                             <input
@@ -121,12 +123,14 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                         {isLoading ? (
                             <Loader2 size={20} className="animate-spin" />
                         ) : (
-                            <>Entrar <ArrowRight size={20} /></>
+                            <>
+                                {t('auth.login.btn')} <ArrowRight size={20} />
+                            </>
                         )}
                     </button>
 
                     <div style={{ marginTop: '1.5rem', textAlign: 'center', fontSize: '0.85rem', color: '#666' }}>
-                        Acceso exclusivo para administradores.
+                        {t('auth.login.footer')}
                     </div>
                 </form>
             </div>

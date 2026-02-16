@@ -1,36 +1,95 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useEvents } from '../context/EventsContext';
+import { useLanguage } from '../context/LanguageContext';
 import { useNavigate } from 'react-router-dom';
-import { Calendar } from 'lucide-react';
+import { Calendar, Filter, X, Tag } from 'lucide-react';
 
-const EventsTable: React.FC = () => {
+interface EventsTableProps {
+    events?: any[]; // Optional prop to override internal data fetching
+}
+
+const EventsTable: React.FC<EventsTableProps> = ({ events: externalEvents }) => {
     const [selectedEvents, setSelectedEvents] = useState<string[]>([]);
     const { user } = useAuth();
     const { colors, theme } = useTheme();
-    const { events: rawEvents, deleteEvents } = useEvents();
+    const { events: contextEvents, deleteEvents, updateEvent } = useEvents();
+    const { t, language } = useLanguage();
     const navigate = useNavigate();
 
-    const mappedEvents = rawEvents.map((ev: any) => ({
-        id: ev.id,
-        title: `Boda de ${ev.partner1} & ${ev.partner2}`,
-        originalData: ev,
-        type: 'Invitación + Confirmación de asistencia',
-        image: ev.imageUrl || null,
-        created: new Date().toLocaleDateString('es-ES'), // Could add created field later
-        eventDate: ev.date ? new Date(ev.date).toLocaleDateString('es-ES') : 'Por definir',
-        lastDelivery: 'Sin enviar',
-        openRate: 0,
-        responseRate: 0,
-        status: 'Modo de prueba'
-    }));
+    // Filtering State
+    const [searchTerm, setSearchTerm] = useState('');
+    const [filterTag, setFilterTag] = useState('');
+    const [filterDate, setFilterDate] = useState('');
 
-    const events = mappedEvents;
+    // Inline Tag Editing State
+    const [editingTagId, setEditingTagId] = useState<string | null>(null);
+
+    // Use external events if provided, otherwise use context events
+    const rawEvents = externalEvents || contextEvents;
+
+    // Get Unique Tags for the Filter Dropdown and Editing
+    const uniqueTags = useMemo(() => {
+        const tags = new Set<string>();
+        // Add some default tags if desired, or just rely on existing ones
+        tags.add('Boda');
+        tags.add('Cumpleaños');
+        tags.add('Baby Shower');
+        tags.add('Corporativo');
+
+        rawEvents.forEach((ev: any) => {
+            if (ev.selectedTag) tags.add(ev.selectedTag);
+            if (ev.customTags && Array.isArray(ev.customTags)) {
+                ev.customTags.forEach((t: string) => tags.add(t));
+            }
+        });
+        return Array.from(tags).sort();
+    }, [rawEvents]);
+
+    const mappedEvents = useMemo(() => {
+        const locale = language === 'es' ? 'es-ES' : 'en-US';
+        return rawEvents.map((ev: any) => ({
+            id: ev.id,
+            title: ev.partner1 && ev.partner2 ? `Boda de ${ev.partner1} & ${ev.partner2}` : (ev.title || 'Evento Sin Título'),
+            originalData: ev,
+            type: t('dashboard.table.event_type'),
+            image: ev.imageUrl || null,
+            created: new Date().toLocaleDateString(locale),
+            eventDate: ev.date ? new Date(ev.date) : null,
+            eventDateString: ev.date ? new Date(ev.date).toLocaleDateString(locale) : 'Por definir',
+            lastDelivery: t('dashboard.table.not_sent'),
+            openRate: 0,
+            responseRate: 0,
+            status: t('dashboard.table.status.trial')
+        }));
+    }, [rawEvents, language, t]);
+
+    // Apply Filters
+    const events = useMemo(() => {
+        return mappedEvents.filter((ev: any) => {
+            const searchLower = searchTerm.toLowerCase();
+            const matchesSearch =
+                searchTerm === '' ||
+                ev.title.toLowerCase().includes(searchLower) ||
+                (ev.originalData.partner1 && ev.originalData.partner1.toLowerCase().includes(searchLower)) ||
+                (ev.originalData.partner2 && ev.originalData.partner2.toLowerCase().includes(searchLower)) ||
+                (ev.originalData.location && ev.originalData.location.toLowerCase().includes(searchLower)) ||
+                (ev.originalData.selectedTag && ev.originalData.selectedTag.toLowerCase().includes(searchLower)) ||
+                ev.eventDateString.toLowerCase().includes(searchLower);
+
+            const matchesTag = filterTag ? ev.originalData.selectedTag === filterTag : true;
+            const matchesDate = filterDate
+                ? (ev.originalData.date === filterDate) // Compare exact YYYY-MM-DD strings
+                : true;
+
+            return matchesSearch && matchesTag && matchesDate;
+        });
+    }, [mappedEvents, searchTerm, filterTag, filterDate]);
 
     const toggleSelectAll = (checked: boolean) => {
         if (checked) {
-            setSelectedEvents(events.map(ev => ev.id));
+            setSelectedEvents(events.map((ev: any) => ev.id));
         } else {
             setSelectedEvents([]);
         }
@@ -53,19 +112,109 @@ const EventsTable: React.FC = () => {
         }
     };
 
+    const clearFilters = () => {
+        setSearchTerm('');
+        setFilterTag('');
+        setFilterDate('');
+    };
+
+    const handleUpdateTag = async (eventId: string, newTag: string) => {
+        const eventToUpdate = rawEvents.find((e: any) => e.id === eventId);
+        if (eventToUpdate) {
+            const updatedEvent = {
+                ...eventToUpdate,
+                selectedTag: newTag
+            };
+            await updateEvent(updatedEvent);
+        }
+        setEditingTagId(null);
+    };
+
+    const hasFilters = searchTerm || filterTag || filterDate;
+
     return (
-        <div style={{ backgroundColor: colors.cardBg, border: `1px solid ${colors.border}`, borderRadius: '4px', overflow: 'hidden', fontFamily: "'Montserrat', sans-serif" }}>
+        <div style={{
+            backgroundColor: colors.cardBg,
+            border: `1px solid ${colors.border}`,
+            borderRadius: '4px',
+            overflow: 'hidden',
+            fontFamily: "'Montserrat', sans-serif"
+        }}>
             {/* Toolbar */}
-            <div style={{ padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${colors.border}` }}>
-                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                    <button style={{ padding: '0.5rem 1rem', border: `1px solid ${colors.border}`, background: colors.cardBg, borderRadius: '4px', color: theme === 'dark' ? '#34D399' : '#059669', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' }}>Activo</button>
-                    <button style={{ padding: '0.5rem 1rem', border: `1px solid ${colors.border}`, background: 'transparent', borderRadius: '4px', color: colors.muted, fontSize: '0.85rem', cursor: 'pointer' }}>Archivado</button>
+            <div style={{
+                padding: '1rem',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                borderBottom: `1px solid ${colors.border}`,
+                flexWrap: 'wrap',
+                gap: '1rem'
+            }}>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <button style={{ padding: '0.5rem 1rem', border: `1px solid ${colors.border}`, background: colors.cardBg, borderRadius: '4px', color: theme === 'dark' ? '#34D399' : '#059669', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' }}>{t('dashboard.filter.active')}</button>
+                    {/* <button style={{ padding: '0.5rem 1rem', border: `1px solid ${colors.border}`, background: 'transparent', borderRadius: '4px', color: colors.muted, fontSize: '0.85rem', cursor: 'pointer' }}>{t('dashboard.filter.archived')}</button> */}
+
+                    {/* Tag Filter */}
+                    <div style={{ position: 'relative' }}>
+                        <select
+                            value={filterTag}
+                            onChange={(e) => setFilterTag(e.target.value)}
+                            style={{
+                                padding: '0.5rem 2rem 0.5rem 0.8rem',
+                                border: `1px solid ${colors.border}`,
+                                borderRadius: '4px',
+                                fontSize: '0.85rem',
+                                background: colors.bg,
+                                color: filterTag ? (theme === 'dark' ? '#34D399' : '#059669') : colors.muted,
+                                outline: 'none',
+                                cursor: 'pointer',
+                                appearance: 'none',
+                                fontWeight: filterTag ? 600 : 400
+                            }}
+                        >
+                            <option value="">{t('dashboard.filter.all_tags')}</option>
+                            {uniqueTags.map(tag => (
+                                <option key={tag} value={tag}>{tag}</option>
+                            ))}
+                        </select>
+                        <Filter size={14} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: colors.muted }} />
+                    </div>
+
+                    {/* Date Filter */}
+                    <input
+                        type="date"
+                        value={filterDate}
+                        onChange={(e) => setFilterDate(e.target.value)}
+                        style={{
+                            padding: '0.5rem',
+                            border: `1px solid ${colors.border}`,
+                            borderRadius: '4px',
+                            fontSize: '0.85rem',
+                            background: colors.bg,
+                            color: filterDate ? (theme === 'dark' ? '#34D399' : '#059669') : colors.muted,
+                            outline: 'none',
+                            fontWeight: filterDate ? 600 : 400
+                        }}
+                    />
+
+                    {hasFilters && (
+                        <button
+                            onClick={clearFilters}
+                            title={t('dashboard.filter.clear')}
+                            style={{
+                                background: 'none', border: 'none', cursor: 'pointer',
+                                color: '#EF4444', display: 'flex', alignItems: 'center'
+                            }}
+                        >
+                            <X size={18} />
+                        </button>
+                    )}
 
                     {selectedEvents.length > 0 && (
                         <button
                             onClick={handleDeleteSelected}
                             style={{
-                                marginLeft: '1rem',
+                                marginLeft: '0.5rem',
                                 padding: '0.5rem 1rem',
                                 border: 'none',
                                 background: '#EF4444',
@@ -76,23 +225,29 @@ const EventsTable: React.FC = () => {
                                 fontWeight: 600
                             }}
                         >
-                            Eliminar ({selectedEvents.length})
+                            {t('dashboard.delete_selected')} ({selectedEvents.length})
                         </button>
                     )}
                 </div>
-                <input
-                    type="text"
-                    placeholder="Buscar eventos"
-                    style={{
-                        padding: '0.5rem',
-                        border: `1px solid ${colors.border}`,
-                        borderRadius: '4px',
-                        fontSize: '0.85rem',
-                        background: colors.bg,
-                        color: colors.text,
-                        outline: 'none'
-                    }}
-                />
+
+                <div style={{ position: 'relative' }}>
+                    <input
+                        type="text"
+                        placeholder={t('dashboard.search_placeholder')}
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        style={{
+                            padding: '0.5rem',
+                            border: `1px solid ${colors.border}`,
+                            borderRadius: '4px',
+                            fontSize: '0.85rem',
+                            background: colors.bg,
+                            color: colors.text,
+                            outline: 'none',
+                            minWidth: '250px'
+                        }}
+                    />
+                </div>
             </div>
 
             {/* Table */}
@@ -107,18 +262,18 @@ const EventsTable: React.FC = () => {
                                     onChange={(e) => toggleSelectAll(e.target.checked)}
                                 />
                             </th>
-                            <th style={{ padding: '1rem', textAlign: 'left' }}>Título del envío</th>
-                            <th style={{ padding: '1rem', textAlign: 'left' }}>Creado el</th>
-                            <th style={{ padding: '1rem', textAlign: 'left' }}>Fecha del evento</th>
-                            <th style={{ padding: '1rem', textAlign: 'left' }}>Última entrega</th>
-                            <th style={{ padding: '1rem', textAlign: 'left' }}>Tasa de apertura</th>
-                            <th style={{ padding: '1rem', textAlign: 'left' }}>Tasa de respuesta</th>
-                            <th style={{ padding: '1rem', textAlign: 'left' }}>Comprar</th>
+                            <th style={{ padding: '1rem', textAlign: 'left' }}>{t('dashboard.table.header.title')}</th>
+                            <th style={{ padding: '1rem', textAlign: 'left' }}>{t('dashboard.table.header.created')}</th>
+                            <th style={{ padding: '1rem', textAlign: 'left' }}>{t('dashboard.table.header.event_date')}</th>
+                            <th style={{ padding: '1rem', textAlign: 'left' }}>{t('dashboard.table.header.last_delivery')}</th>
+                            <th style={{ padding: '1rem', textAlign: 'left' }}>{t('dashboard.table.header.open_rate')}</th>
+                            <th style={{ padding: '1rem', textAlign: 'left' }}>{t('dashboard.table.header.response_rate')}</th>
+                            <th style={{ padding: '1rem', textAlign: 'left' }}>{t('dashboard.table.header.status')}</th>
                         </tr>
                     </thead>
                     <tbody>
                         {events.length > 0 ? (
-                            events.map(ev => (
+                            events.map((ev: any) => (
                                 <tr key={ev.id} style={{ borderBottom: `1px solid ${colors.border}` }}>
                                     <td style={{ padding: '1rem', textAlign: 'center' }}>
                                         <input
@@ -153,12 +308,59 @@ const EventsTable: React.FC = () => {
                                                     {ev.title}
                                                 </div>
                                                 <div style={{ fontStyle: 'italic', color: colors.muted, fontSize: '0.8rem' }}>{ev.type}</div>
-                                                <div style={{ marginTop: '0.3rem', fontSize: '0.75rem', color: colors.muted, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>+ Etiquetas</div>
+                                                <div style={{ marginTop: '0.3rem', fontSize: '0.75rem', color: colors.muted }}>
+                                                    {editingTagId === ev.id ? (
+                                                        <select
+                                                            autoFocus
+                                                            value={ev.originalData.selectedTag || ''}
+                                                            onChange={(e) => handleUpdateTag(ev.id, e.target.value)}
+                                                            onBlur={() => setEditingTagId(null)}
+                                                            style={{
+                                                                padding: '0.1rem',
+                                                                fontSize: '0.75rem',
+                                                                borderRadius: '4px',
+                                                                border: `1px solid ${colors.border}`,
+                                                                background: colors.bg,
+                                                                color: colors.text
+                                                            }}
+                                                        >
+                                                            <option value="">{t('dashboard.table.no_tag')}</option>
+                                                            {uniqueTags.map(tag => (
+                                                                <option key={tag} value={tag}>{tag}</option>
+                                                            ))}
+                                                        </select>
+                                                    ) : (
+                                                        <div
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setEditingTagId(ev.id);
+                                                            }}
+                                                            style={{
+                                                                display: 'flex', alignItems: 'center', gap: '0.3rem',
+                                                                cursor: 'pointer',
+                                                                transition: 'opacity 0.2s',
+                                                                opacity: 0.8
+                                                            }}
+                                                            onMouseOver={(e) => e.currentTarget.style.opacity = '1'}
+                                                            onMouseOut={(e) => e.currentTarget.style.opacity = '0.8'}
+                                                        >
+                                                            {ev.originalData.selectedTag ? (
+                                                                <span style={{ backgroundColor: theme === 'dark' ? 'rgba(52, 211, 153, 0.2)' : '#ECFDF5', color: theme === 'dark' ? '#34D399' : '#059669', padding: '0.1rem 0.4rem', borderRadius: '4px', border: `1px solid ${theme === 'dark' ? 'rgba(52, 211, 153, 0.3)' : '#D1FAE5'}` }}>
+                                                                    {ev.originalData.selectedTag}
+                                                                </span>
+                                                            ) : (
+                                                                <span style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                                                                    <Tag size={10} /> + {t('dashboard.table.add_tag')}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     </td>
                                     <td style={{ padding: '1rem' }}>{ev.created}</td>
-                                    <td style={{ padding: '1rem' }}>{ev.eventDate}</td>
+                                    <td style={{ padding: '1rem' }}>{ev.eventDateString}</td>
                                     <td style={{ padding: '1rem' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                             <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: ev.lastDelivery === 'Sin enviar' ? colors.border : '#60A5FA' }}></div>
@@ -172,7 +374,7 @@ const EventsTable: React.FC = () => {
                                             </div>
                                             <span>{ev.openRate}%</span>
                                         </div>
-                                        <div style={{ fontSize: '0.7rem', color: theme === 'dark' ? '#34D399' : '#059669', cursor: 'pointer', marginTop: '0.2rem' }}>View Details</div>
+                                        <div style={{ fontSize: '0.7rem', color: theme === 'dark' ? '#34D399' : '#059669', cursor: 'pointer', marginTop: '0.2rem' }}>{t('dashboard.table.view_details')}</div>
                                     </td>
                                     <td style={{ padding: '1rem' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -181,13 +383,13 @@ const EventsTable: React.FC = () => {
                                             </div>
                                             <span>{ev.responseRate}%</span>
                                         </div>
-                                        <div style={{ fontSize: '0.7rem', color: theme === 'dark' ? '#34D399' : '#059669', cursor: 'pointer', marginTop: '0.2rem' }}>View Details</div>
+                                        <div style={{ fontSize: '0.7rem', color: theme === 'dark' ? '#34D399' : '#059669', cursor: 'pointer', marginTop: '0.2rem' }}>{t('dashboard.table.view_details')}</div>
                                     </td>
                                     <td style={{ padding: '1rem' }}>
                                         {ev.status === 'Comprado' ? (
-                                            <span style={{ color: colors.text }}>Comprado</span>
+                                            <span style={{ color: colors.text }}>{t('dashboard.table.status.purchased')}</span>
                                         ) : (
-                                            <span style={{ backgroundColor: theme === 'dark' ? 'rgba(239, 68, 68, 0.2)' : '#FEE2E2', color: '#EF4444', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 600 }}>Modo de prueba</span>
+                                            <span style={{ backgroundColor: theme === 'dark' ? 'rgba(239, 68, 68, 0.2)' : '#FEE2E2', color: '#EF4444', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 600 }}>{t('dashboard.table.status.trial')}</span>
                                         )}
                                     </td>
                                 </tr>
@@ -195,7 +397,7 @@ const EventsTable: React.FC = () => {
                         ) : (
                             <tr style={{ borderBottom: `1px solid ${colors.border}` }}>
                                 <td colSpan={8} style={{ padding: '3rem', textAlign: 'center', color: colors.muted }}>
-                                    No tienes eventos activos.
+                                    {hasFilters ? t('dashboard.table.no_results') : t('dashboard.table.no_events')}
                                 </td>
                             </tr>
                         )}

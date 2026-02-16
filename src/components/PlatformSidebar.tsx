@@ -2,19 +2,32 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useEvents } from '../context/EventsContext';
 import {
-    User, Search, MessageSquare, HelpCircle,
-    Inbox, Globe, Smartphone, LogOut, ChevronDown, ChevronRight, Plus, Moon, Sun, Settings, LayoutDashboard, FolderOpen
+    User,
+    Inbox, Globe, Smartphone, LogOut, ChevronDown, Plus, Moon, Sun, Settings, LayoutDashboard, Search,
+    MessageSquare, Users, HelpCircle
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
-import { useState } from 'react';
+import { useLanguage } from '../context/LanguageContext';
+import { useState, useRef, useEffect } from 'react';
 
 const PlatformSidebar: React.FC = () => {
     const { user, logout } = useAuth();
     const { colors, theme, toggleTheme } = useTheme();
+    const { t, language, toggleLanguage, isMobileSimulation, toggleMobileSimulation } = useLanguage();
     const navigate = useNavigate();
     const location = useLocation();
     const { events } = useEvents();
     const [isEventsExpanded, setIsEventsExpanded] = useState(true);
+    const eventsListRef = useRef<HTMLUListElement>(null);
+    const [eventsHeight, setEventsHeight] = useState<string | number>('auto');
+
+    useEffect(() => {
+        if (isEventsExpanded) {
+            setEventsHeight(eventsListRef.current?.scrollHeight || 'auto');
+        } else {
+            setEventsHeight(0);
+        }
+    }, [isEventsExpanded, events]);
 
     const handleLogout = () => {
         logout();
@@ -23,12 +36,14 @@ const PlatformSidebar: React.FC = () => {
 
     const isActive = (path: string) => location.pathname === path;
 
-    const navItems = [
-        { path: '/explore', label: 'EXPLORAR DISEÑOS', icon: <Search size={18} /> },
-        { path: '/messages', label: 'MIS MENSAJES', icon: <MessageSquare size={18} /> },
-        { path: '/directory', label: 'DIRECTORIO', icon: <FolderOpen size={18} /> },
-        { path: '/help', label: 'CENTRO DE AYUDA', icon: <HelpCircle size={18} /> },
-        { path: '/received', label: 'ENVÍOS RECIBIDOS', icon: <Inbox size={18} /> },
+    const navItems: any[] = [
+        { label: t('nav.explore'), icon: <Search size={18} />, path: '/explore' },
+        { label: t('nav.messages'), icon: <MessageSquare size={18} />, path: '/messages' },
+        { label: t('nav.directory'), icon: <Globe size={18} />, path: '/directory' },
+        { label: t('nav.received'), icon: <Inbox size={18} />, path: '/received' },
+        { label: t('nav.guests'), icon: <Users size={18} />, path: '/guests' },
+        { label: t('nav.settings'), icon: <Settings size={18} />, path: '/settings' },
+        { label: t('nav.help'), icon: <HelpCircle size={18} />, path: '/help' },
     ];
 
     return (
@@ -81,7 +96,7 @@ const PlatformSidebar: React.FC = () => {
                     }}>
                         <User size={16} />
                     </div>
-                    <span style={{ fontWeight: 600, fontSize: '0.9rem', color: colors.text }}>{user?.username || 'Mi Cuenta'}</span>
+                    <span style={{ fontWeight: 600, fontSize: '0.9rem', color: colors.text }}>{user?.username || t('profile.my_account')}</span>
                     <Settings size={14} color={colors.muted} style={{ marginLeft: 'auto', opacity: 0.7 }} />
                 </div>
 
@@ -96,17 +111,27 @@ const PlatformSidebar: React.FC = () => {
                         }}
                     >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            {isEventsExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                            <span>MIS ENVÍOS</span>
+                            <div style={{
+                                transition: 'transform 0.3s ease',
+                                transform: isEventsExpanded ? 'rotate(0deg)' : 'rotate(-90deg)'
+                            }}>
+                                <ChevronDown size={14} />
+                            </div>
+                            <span>{t('nav.my_events')}</span>
                         </div>
                         <span style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }} onClick={(e) => { e.stopPropagation(); navigate('/create'); }}>
-                            NUEVO <Plus size={12} />
+                            {t('nav.new')} <Plus size={12} />
                         </span>
                     </div>
 
-                    {/* Event List Items */}
-                    {isEventsExpanded && (
-                        <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.8rem', paddingLeft: '1rem' }}>
+                    {/* Event List Items container with smooth height transition */}
+                    <div style={{
+                        maxHeight: isEventsExpanded ? eventsHeight : 0,
+                        overflow: 'hidden',
+                        transition: 'max-height 0.4s ease-in-out, opacity 0.4s ease-in-out',
+                        opacity: isEventsExpanded ? 1 : 0
+                    }}>
+                        <ul ref={eventsListRef} style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.8rem', paddingLeft: '1rem', paddingBottom: '0.5rem' }}>
                             {events.length > 0 ? (
                                 events.map((ev) => (
                                     <li
@@ -122,11 +147,11 @@ const PlatformSidebar: React.FC = () => {
                                 ))
                             ) : (
                                 <li style={{ fontSize: '0.85rem', color: colors.muted, fontStyle: 'italic' }}>
-                                    Sin eventos activos
+                                    {t('nav.no_events')}
                                 </li>
                             )}
                         </ul>
-                    )}
+                    </div>
                 </div>
 
                 {/* Divider */}
@@ -149,7 +174,7 @@ const PlatformSidebar: React.FC = () => {
                         }}
                     >
                         <LayoutDashboard size={18} />
-                        <span>INICIO</span>
+                        <span>{t('nav.home')}</span>
                     </div>
 
                     {navItems.map((item) => (
@@ -195,19 +220,25 @@ const PlatformSidebar: React.FC = () => {
                     style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', cursor: 'pointer', opacity: 0.9, color: colors.text }}
                 >
                     {theme === 'dark' ? <Moon size={16} /> : <Sun size={16} />}
-                    {theme === 'dark' ? 'MODO NOCHE' : 'MODO DÍA'}
+                    {theme === 'dark' ? t('footer.mode_night') : t('footer.mode_day')}
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', cursor: 'pointer', opacity: 0.9 }}>
-                    <Globe size={16} /> ESPAÑOL <ChevronDown size={14} />
+                <div
+                    onClick={toggleLanguage}
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', cursor: 'pointer', opacity: 0.9 }}
+                >
+                    <Globe size={16} /> {language === 'es' ? t('footer.lang_es') : t('footer.lang_en')} <ChevronDown size={14} />
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', cursor: 'pointer', opacity: 0.9 }}>
-                    <Smartphone size={16} /> VERSIÓN MÓVIL
+                <div
+                    onClick={toggleMobileSimulation}
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', cursor: 'pointer', opacity: 0.9, color: isMobileSimulation ? colors.primary : colors.text }}
+                >
+                    <Smartphone size={16} /> {isMobileSimulation ? t('footer.desktop_version') : t('footer.mobile_version')}
                 </div>
                 <div
                     onClick={handleLogout}
                     style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', opacity: 0.9, color: '#EF4444' }}
                 >
-                    <LogOut size={16} /> SALIR
+                    <LogOut size={16} /> {t('footer.logout')}
                 </div>
             </div>
         </div>

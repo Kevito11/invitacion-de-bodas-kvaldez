@@ -16,6 +16,7 @@ interface EventsContextType {
     loading: boolean;
     fetchEvents: () => void;
     deleteEvents: (ids: string[]) => void;
+    updateEvent: (event: EventData) => void;
     clearAllEvents: () => void;
 }
 
@@ -85,8 +86,16 @@ export const EventsProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         localStorage.removeItem(`invitation_${user.username}`); // Also clear legacy
     };
 
+    const updateEvent = (updatedEvent: EventData) => {
+        if (!user?.username) return;
+
+        const updatedEvents = events.map(ev => ev.id === updatedEvent.id ? updatedEvent : ev);
+        setEvents(updatedEvents);
+        localStorage.setItem(`events_${user.username}`, JSON.stringify(updatedEvents));
+    };
+
     return (
-        <EventsContext.Provider value={{ events, loading, fetchEvents, deleteEvents, clearAllEvents }}>
+        <EventsContext.Provider value={{ events, loading, fetchEvents, deleteEvents, updateEvent, clearAllEvents }}>
             {children}
         </EventsContext.Provider>
     );

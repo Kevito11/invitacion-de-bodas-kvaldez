@@ -1,9 +1,11 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { MapPin, Calendar, Heart, ZoomIn, ZoomOut } from 'lucide-react';
+import { MapPin, Calendar, Heart, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import type { InvitationData } from '../types';
 import CountdownTimer from './UI/CountdownTimer';
 import ScrollReveal from './UI/ScrollReveal';
 import Envelope from './UI/Envelope';
+import BookOpen from './UI/BookOpen';
+import CrumpleReveal from './UI/CrumpleReveal';
 
 interface InvitationPreviewProps {
     data: InvitationData;
@@ -11,17 +13,47 @@ interface InvitationPreviewProps {
     guest?: any; // Personalized guest
     forceShowEnvelope?: boolean; // For editor preview
     isMobilePreview?: boolean; // New prop to fix sizing in builder
+    isThumbnail?: boolean; // New prop for dashboard preview
+    onRSVP?: (status: 'confirmed' | 'declined', message?: string) => Promise<void>;
 }
 
-const getThemeColor = (theme?: string) => {
-    switch (theme) {
-        case 'rose': return '#E0BFB8';
-        case 'sage': return '#9DC183';
-        case 'blue': return '#4169E1';
-        case 'lavender': return '#9370DB';
-        case 'gold':
-        default: return '#D4AF37';
+import { getThemeById } from '../data/themes';
+import { getDressCodeById } from '../data/dressCodes';
+
+// Helper for contrast text color
+const getHighContrastColor = (color: string) => {
+    let r = 0, g = 0, b = 0;
+
+    if (!color) return '#000000';
+
+    // Handle Hex
+    if (color.startsWith('#')) {
+        const hex = color.replace('#', '');
+        if (hex.length === 3) {
+            r = parseInt(hex[0] + hex[0], 16);
+            g = parseInt(hex[1] + hex[1], 16);
+            b = parseInt(hex[2] + hex[2], 16);
+        } else {
+            r = parseInt(hex.substr(0, 2), 16);
+            g = parseInt(hex.substr(2, 2), 16);
+            b = parseInt(hex.substr(4, 2), 16);
+        }
     }
+    // Handle RGB/RGBA
+    else if (color.startsWith('rgb')) {
+        const match = color.match(/(\d+),\s*(\d+),\s*(\d+)/);
+        if (match) {
+            r = parseInt(match[1]);
+            g = parseInt(match[2]);
+            b = parseInt(match[3]);
+        }
+    } else {
+        return '#000000';
+    }
+
+    // Calculate brightness (YIQ formula)
+    const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+    return (yiq >= 128) ? '#1a1a1a' : '#ffffff'; // Return dark gray or white
 };
 
 const getFontFamily = (font?: string) => {
@@ -42,17 +74,23 @@ const getFontFamily = (font?: string) => {
 
 
 
-const BackgroundSlideshow = ({ images, activeIndex, fallbackColor }: { images: string[], activeIndex: number, fallbackColor: string }) => {
+const BackgroundSlideshow = ({ images, activeIndex, fallbackColor, themeBackground, blur = 0, saturation = 100 }: { images: string[], activeIndex: number, fallbackColor: string, themeBackground?: string, blur?: number, saturation?: number }) => {
     // Determine which image to show based on active section index
     // If we have fewer images than sections, we loop them or just cycle.
     // Logic: section 0 -> img 0, section 1 -> img 1, etc.
     // If images is empty, show fallback.
 
+    const filterStyle = `blur(${blur}px) saturate(${saturation}%)`;
+
     if (images.length === 0) {
         return (
             <div style={{
                 position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 0,
-                backgroundImage: `linear-gradient(to bottom, #fff 0%, ${fallbackColor}20 100%)`
+                backgroundImage: themeBackground || `linear-gradient(to bottom, #fff 0%, ${fallbackColor}20 100%)`,
+                backgroundSize: themeBackground ? 'cover' : 'auto',
+                backgroundPosition: 'center',
+                backgroundColor: themeBackground ? '#FAF7F2' : 'transparent', // Fallback color for parchment
+                filter: themeBackground ? filterStyle : 'none'
             }} />
         );
     }
@@ -71,7 +109,7 @@ const BackgroundSlideshow = ({ images, activeIndex, fallbackColor }: { images: s
                         backgroundImage: `url(${img})`,
                         backgroundSize: 'cover',
                         backgroundPosition: 'center',
-                        filter: 'blur(12px) brightness(0.85)', // Difuminado solicitado
+                        filter: filterStyle,
                         transform: 'scale(1.1)' // Prevent blur edges
                     }} />
                 </div>
@@ -80,7 +118,7 @@ const BackgroundSlideshow = ({ images, activeIndex, fallbackColor }: { images: s
     );
 };
 
-const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, isGuest = false, guest, forceShowEnvelope = false, isMobilePreview = false }) => {
+const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, isGuest = false, guest, forceShowEnvelope = false, isMobilePreview = false, isThumbnail = false, onRSVP }) => {
     const [scale, setScale] = useState(1);
     const layout = data.layout || 'scroll'; // Hoisted for effect dependencies
     const containerRef = useRef<HTMLDivElement>(null);
@@ -94,8 +132,9 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, isGuest = f
 
     // RSVP Modal State
     const [showConfirmModal, setShowConfirmModal] = useState(false);
-    const [confirmAction] = useState<'confirm' | 'reject' | null>(null);
+    const [confirmAction, setConfirmAction] = useState<'confirm' | 'reject' | null>(null); // Fixed missing setConfirmAction
     const [guestName, setGuestName] = useState('');
+    const [rsvpMessage, setRsvpMessage] = useState('');
 
     // Envelope State
     const [showEnvelope, setShowEnvelope] = useState(false);
@@ -137,7 +176,10 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, isGuest = f
                 if (entry.isIntersecting) {
                     // Find index of intersecting section
                     const index = Array.from(sections).indexOf(entry.target);
-                    if (index !== -1) {
+                    // Only update activeSection if NOT in auto-scroll thumbnail mode (to avoid fighting the interval)
+                    // Or actually, just let it update, but the interval drives it.
+                    // However, for thumbnail, user scroll is disabled by pointer-events-none parent.
+                    if (index !== -1 && !isThumbnail) {
                         setActiveSection(index);
                     }
                 }
@@ -149,15 +191,108 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, isGuest = f
 
         sections.forEach(s => observer.observe(s));
         return () => observer.disconnect();
-    }, [data, layout]); // Add layout dependency
+    }, [data, layout, isThumbnail]);
 
 
-    // Determine primary color based on theme
-    const themeColor = getThemeColor(data.theme);
-    const titleFont = getFontFamily(data.font);
+
+
+    const backFaceRef = useRef<HTMLDivElement>(null);
+
+    // Auto-Scroll Logic for Thumbnail
+    useEffect(() => {
+        if (!isThumbnail) return;
+
+        const interval = setInterval(() => {
+            setActiveSection(prev => (prev + 1) % 4); // Assuming 4 sections max (Intro, Details, Dress, Gallery)
+        }, 3000);
+
+        return () => clearInterval(interval);
+    }, [isThumbnail]);
+
+    // Cleanup Flip state when NOT in classic layout (optional, but good practice)
+    useEffect(() => {
+        if (layout !== 'classic') {
+            setIsFlipped(false);
+        }
+    }, [layout]);
+
+
+    // Effect to perform the scroll when activeSection changes (for non-slider layouts in thumbnail mode)
+    useEffect(() => {
+        if (!isThumbnail || layout === 'slider') return; // Slider handles state internally via render
+
+        if (layout === 'classic') {
+            // Classic Layout specific logic
+            if (activeSection === 0) {
+                setIsFlipped(false);
+            } else {
+                setIsFlipped(true);
+                // Scroll the back face
+                // Allow a small delay for the flip to start or just scroll immediately (hidden back face scrolls)
+                // If we scroll immediately, it might be visible during flip? 
+                // Actually, if we flip, we probably want to scroll to the top of the back face content first?
+                // But activeSection 1 is the top of back face.
+
+                const container = backFaceRef.current;
+                if (container) {
+                    const sections = container.querySelectorAll('.snap-section');
+                    // The back face contains sections 1, 2, 3.
+                    // So index 0 of back face sections corresponds to activeSection 1.
+                    const targetIndex = activeSection - 1;
+
+                    if (targetIndex >= 0 && sections[targetIndex]) {
+                        const targetSection = sections[targetIndex] as HTMLElement;
+                        // Wait slightly for flip if coming from 0? No, just scroll.
+                        container.scrollTo({
+                            top: targetSection.offsetTop,
+                            behavior: 'smooth'
+                        });
+                    }
+                }
+            }
+        } else {
+            // Standard Scroll Layout
+            const container = scrollContainerRef.current;
+            if (container) {
+                const sections = container.querySelectorAll('.snap-section');
+                const targetSection = sections[activeSection] as HTMLElement;
+                if (targetSection) {
+                    container.scrollTo({
+                        top: targetSection.offsetTop,
+                        behavior: 'smooth'
+                    });
+                }
+            }
+        }
+    }, [activeSection, isThumbnail, layout]);
+
+    // ... existing render code ...
+
+    const currentTheme = getThemeById(data.theme);
+    const themeColor = data.design?.primaryColor || currentTheme.color;
+    const titleFont = getFontFamily(data.design?.font || data.font);
+    const bodyFont = getFontFamily(data.design?.bodyFont || 'montserrat');
+
+    // Calculate readable text color based on overlay or background
+    const effectiveBgColor = data.design?.backgroundColor || currentTheme.contentOverlay || currentTheme.bg || '#ffffff';
+    const readableTextColor = getHighContrastColor(effectiveBgColor);
+    const readableSubTextColor = readableTextColor === '#ffffff' ? '#e0e0e0' : '#555555'; // Slightly dimmer for subtext
+
+
+
+    // Shadow for theme-colored text to ensure visibility if theme color matches background
+    const themeContrast = getHighContrastColor(themeColor);
+    const themeTextShadow = themeContrast === '#ffffff'
+        ? '0 2px 4px rgba(255,255,255,0.5)' // Dark theme color -> Light shadow 
+        : '1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 0 2px 4px rgba(0,0,0,0.5)'; // Light theme color -> Strong Outline + Shadow
 
     const handleZoomIn = () => setScale(prev => Math.min(prev + 0.1, 1.5));
     const handleZoomOut = () => setScale(prev => Math.max(prev - 0.1, 0.5));
+
+    const renderOverlayBackground = (opacity?: number) => {
+        if (!opacity && opacity !== 0) return currentTheme.contentOverlay || 'rgba(255,255,255,0.0)';
+        return `rgba(255,255,255,${opacity})`;
+    };
 
     // Formato de fecha elegante
     const formatDate = (dateString: string) => {
@@ -166,17 +301,23 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, isGuest = f
         return date.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     };
 
-    const handleConfirmation = () => {
-        if (!data.whatsappNumber || !guestName.trim()) return;
+    const handleConfirmation = async () => {
+        if (onRSVP) {
+            await onRSVP(confirmAction === 'confirm' ? 'confirmed' : 'declined', rsvpMessage);
+        }
 
+        if (!data.whatsappNumber) return; // If no WA, just save and close (if onRSVP existed)
+
+        // Proceed to WhatsApp even if saved, as a fallback/confirmation
         const message = confirmAction === 'confirm'
-            ? `Hola! Soy *${guestName}*. Confirmo con gusto mi asistencia a la boda de ${data.partner1} y ${data.partner2}. 🎉`
-            : `Hola! Soy *${guestName}*. Lamento no poder asistir a la boda de ${data.partner1} y ${data.partner2}. Les deseo lo mejor. ❤️`;
+            ? `Hola! Soy *${guestName}*. Confirmo con gusto mi asistencia a la boda de ${data.partner1} y ${data.partner2}. 🎉\n\nMensaje: ${rsvpMessage}`
+            : `Hola! Soy *${guestName}*. Lamento no poder asistir a la boda de ${data.partner1} y ${data.partner2}. Les deseo lo mejor. ❤️\n\nMensaje: ${rsvpMessage}`;
 
         const url = `https://wa.me/${data.whatsappNumber}?text=${encodeURIComponent(message)}`;
         window.open(url, '_blank');
         setShowConfirmModal(false);
         setGuestName('');
+        setRsvpMessage('');
     };
 
     const backgroundImages = [data.backgroundImageUrl, ...(data.backgroundImages || [])].filter(Boolean) as string[];
@@ -269,6 +410,10 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, isGuest = f
                 maxWidth: '600px',
                 margin: '2rem auto',
                 backgroundColor: 'white',
+                backgroundImage: currentTheme.backgroundImage || 'none', // Apply theme texture
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                filter: `blur(${data.design?.blur || 0}px) grayscale(${100 - (data.design?.saturation ?? 100)}%)`, // Apply background filters
                 boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
                 position: 'relative',
                 minHeight: '80vh', // Ensure it looks like a paper
@@ -309,7 +454,16 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, isGuest = f
     // Helper Functions for Rendering Sections
     const renderIntroSection = () => (
         <section className="snap-section" style={{ ...sectionStyles, ...getBookPageStyle(0) }}>
-            <div style={{ width: '100%', maxWidth: '600px', margin: '0 auto', padding: '0 1rem', boxSizing: 'border-box', textAlign: 'center' }}>
+            <div style={{
+                width: '100%', maxWidth: '600px', margin: '0 auto', padding: '0 1rem', boxSizing: 'border-box', textAlign: 'center',
+                ...(layout !== 'classic' ? {
+                    backgroundColor: currentTheme.contentOverlay || 'transparent',
+                    borderRadius: '16px',
+                    padding: '2rem 1rem',
+                    marginTop: '2rem', // Spacing from top
+                    backdropFilter: 'blur(3px)'
+                } : {})
+            }}>
                 {data.imageUrl ? (
                     <div className="animate-fade-in" style={{
                         width: '100%',
@@ -332,49 +486,49 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, isGuest = f
                         />
                     </div>
                 ) : (
-                    <ScrollReveal>
+                    <ScrollReveal animation={data.animationStyle}>
                         <div style={{ marginBottom: '1rem', color: themeColor, transition: 'color 0.3s ease' }}>
                             <Heart fill={themeColor} size={32} style={{ margin: '0 auto', transition: 'fill 0.3s ease' }} />
                         </div>
                     </ScrollReveal>
                 )}
 
-                <ScrollReveal>
+                <ScrollReveal animation={data.animationStyle}>
                     <h3 style={{
                         fontSize: '0.75rem',
                         textTransform: 'uppercase',
                         letterSpacing: '3px',
-                        color: '#666',
+                        color: readableSubTextColor,
                         marginBottom: '1rem',
-                        fontFamily: "'Lato', sans-serif"
+                        fontFamily: bodyFont
                     }}>
                         {guest ? (
-                            <span style={{ color: themeColor, fontWeight: 600 }}>
+                            <span style={{ color: themeColor, fontWeight: 600, textShadow: themeTextShadow }}>
                                 NOS COMPLACE INVITARLE, {guest.name}
                             </span>
                         ) : 'TE INVITAMOS A LA BODA DE'}
                     </h3>
                 </ScrollReveal>
 
-                <ScrollReveal>
+                <ScrollReveal animation={data.animationStyle}>
                     <h1 style={{
                         fontSize: isMobilePreview
                             ? (data.font === 'greatvibes' ? '3.5rem' : '2.8rem')
                             : (data.font === 'greatvibes' ? 'clamp(3rem, 12vw, 5rem)' : 'clamp(2.5rem, 10vw, 4rem)'),
-                        color: '#2D2A26',
+                        color: themeColor,
+                        textShadow: themeTextShadow,
                         margin: '1rem 0',
                         lineHeight: '1.2',
                         fontFamily: titleFont,
-                        wordBreak: 'break-word',
-                        textShadow: '0 2px 4px rgba(255,255,255,0.5)'
+                        wordBreak: 'break-word'
                     }}>
                         <span style={{ display: 'block' }}>{(data.partner1 || 'Ana').split(' ')[0]}</span>
-                        <span style={{ fontSize: '1.2rem', fontStyle: 'italic', color: themeColor, margin: '0.2rem 0', display: 'block', transition: 'color 0.3s ease', fontFamily: "'Playfair Display', serif" }}>&</span>
+                        <span style={{ fontSize: '1.2rem', fontStyle: 'italic', color: themeColor, margin: '0.2rem 0', display: 'block', transition: 'color 0.3s ease', fontFamily: "'Playfair Display', serif", textShadow: themeTextShadow }}>&</span>
                         <span style={{ display: 'block' }}>{(data.partner2 || 'Carlos').split(' ')[0]}</span>
                     </h1>
                 </ScrollReveal>
 
-                <ScrollReveal>
+                <ScrollReveal animation={data.animationStyle}>
                     <CountdownTimer targetDate={data.date} time={data.time} />
                 </ScrollReveal>
 
@@ -384,16 +538,19 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, isGuest = f
                         <button
                             onClick={(e) => { e.stopPropagation(); setIsFlipped(true); }}
                             style={{
-                                background: 'transparent',
-                                border: `1px solid ${themeColor}`,
+                                background: themeColor,
+                                border: 'none',
                                 borderRadius: '30px',
-                                padding: '0.5rem 1.5rem',
-                                color: themeColor,
+                                padding: '0.8rem 2rem',
+                                color: getHighContrastColor(themeColor),
                                 cursor: 'pointer',
-                                fontSize: '0.9rem',
+                                fontSize: '1rem',
+                                fontWeight: 500,
+                                boxShadow: '0 4px 15px rgba(0,0,0,0.15)',
                                 display: 'inline-flex',
                                 alignItems: 'center',
-                                gap: '0.5rem'
+                                gap: '0.5rem',
+                                transition: 'transform 0.2s, box-shadow 0.2s',
                             }}
                         >
                             Ver Detalles ↻
@@ -407,10 +564,10 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, isGuest = f
     const renderDetailsSection = () => (
         <section className="snap-section" style={{ ...sectionStyles, ...getBookPageStyle(1) }}>
             <div style={{ width: '100%', maxWidth: '600px', margin: '0 auto', padding: '0 1rem', boxSizing: 'border-box', textAlign: 'center' }}>
-                <ScrollReveal>
+                <ScrollReveal animation={data.animationStyle}>
                     <div style={{
                         marginBottom: '2rem',
-                        background: 'rgba(255,255,255,0.7)',
+                        background: currentTheme.contentOverlay || 'rgba(255,255,255,0.7)',
                         padding: '2rem 1rem',
                         borderRadius: '24px',
                         backdropFilter: 'blur(10px)',
@@ -419,13 +576,13 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, isGuest = f
                     }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
                             <Calendar size={20} color={themeColor} />
-                            <p style={{ fontSize: '1.3rem', margin: 0, color: '#444', fontWeight: 500 }}>{formatDate(data.date)}</p>
+                            <p style={{ fontSize: '1.3rem', margin: 0, color: readableTextColor, fontWeight: 500 }}>{formatDate(data.date)}</p>
                         </div>
-                        <p style={{ fontSize: '1.1rem', color: '#666' }}>{data.time || '00:00'}</p>
+                        <p style={{ fontSize: '1.1rem', color: readableSubTextColor, fontFamily: bodyFont }}>{data.time || '00:00'}</p>
                     </div>
                 </ScrollReveal>
 
-                <ScrollReveal>
+                <ScrollReveal animation={data.animationStyle}>
                     <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginBottom: '2.5rem' }}>
                         <a
                             href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=Boda+de+${encodeURIComponent(data.partner1)}+y+${encodeURIComponent(data.partner2)}&dates=${data.date.replace(/-/g, '')}T${data.time.replace(':', '')}00/${data.date.replace(/-/g, '')}T235900&details=¡Nos+casamos!&location=${encodeURIComponent(data.venueName + ', ' + data.venueAddress)}`}
@@ -433,7 +590,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, isGuest = f
                             rel="noopener noreferrer"
                             style={{
                                 fontSize: '0.9rem',
-                                color: '#fff',
+                                color: getHighContrastColor(themeColor),
                                 backgroundColor: themeColor,
                                 padding: '0.6rem 1.2rem',
                                 borderRadius: '50px',
@@ -446,10 +603,10 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, isGuest = f
                     </div>
                 </ScrollReveal>
 
-                <ScrollReveal>
+                <ScrollReveal animation={data.animationStyle}>
                     <div style={{
                         padding: '2rem 1rem',
-                        background: 'rgba(255,255,255,0.7)',
+                        background: currentTheme.contentOverlay || 'rgba(255,255,255,0.7)',
                         borderRadius: '24px',
                         backdropFilter: 'blur(10px)',
                         boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.07)',
@@ -464,12 +621,13 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, isGuest = f
                                 style={{
                                     fontSize: '1.2rem',
                                     margin: 0,
-                                    color: '#2D2A26',
+                                    color: readableTextColor,
                                     textDecoration: 'none',
                                     borderBottom: `1px solid ${themeColor}40`,
                                     transition: 'all 0.2s ease',
                                     cursor: 'pointer',
-                                    fontWeight: 600
+                                    fontWeight: 600,
+                                    fontFamily: bodyFont
                                 }}
                                 title="Ver ubicación"
                             >
@@ -483,7 +641,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, isGuest = f
                             style={{
                                 display: 'block',
                                 fontSize: '1rem',
-                                color: '#888',
+                                color: readableSubTextColor,
                                 marginTop: '0.4rem',
                                 textDecoration: 'none'
                             }}
@@ -494,57 +652,92 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, isGuest = f
                 </ScrollReveal>
 
                 {/* Back Button (Only Classic) */}
-                {layout === 'classic' && (
-                    <div style={{ marginTop: '2rem', marginBottom: '2rem' }}>
-                        <button
-                            onClick={(e) => { e.stopPropagation(); setIsFlipped(false); }}
-                            style={{
-                                background: 'transparent',
-                                border: `1px solid ${themeColor}`,
-                                borderRadius: '30px',
-                                padding: '0.5rem 1.5rem',
-                                color: themeColor,
-                                cursor: 'pointer',
-                                fontSize: '0.9rem',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '0.5rem'
-                            }}
-                        >
-                            ↶ Volver a la Portada
-                        </button>
-                    </div>
-                )}
-            </div>
-        </section>
+                {
+                    layout === 'classic' && (
+                        <div style={{ marginTop: '2rem', marginBottom: '2rem' }}>
+                            <button
+                                onClick={(e) => { e.stopPropagation(); setIsFlipped(false); }}
+                                style={{
+                                    background: 'transparent',
+                                    border: `1px solid ${themeColor}`,
+                                    borderRadius: '30px',
+                                    padding: '0.5rem 1.5rem',
+                                    color: themeColor,
+                                    cursor: 'pointer',
+                                    fontSize: '0.9rem',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '0.5rem'
+                                }}
+                            >
+                                ↶ Volver a la Portada
+                            </button>
+                        </div>
+                    )
+                }
+            </div >
+        </section >
     );
 
-    const renderDressCodeSection = () => (
-        <section className="snap-section" style={{ ...sectionStyles, ...getBookPageStyle(2) }}>
-            <div style={{ width: '100%', maxWidth: '600px', margin: '0 auto', padding: '0 1rem', boxSizing: 'border-box', textAlign: 'center' }}>
-                <ScrollReveal>
-                    <div style={{
-                        padding: '2rem 1rem',
-                        background: 'rgba(255,255,255,0.8)',
-                        borderRadius: '24px',
-                        backdropFilter: 'blur(10px)',
-                        boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.07)',
-                        marginBottom: '2rem'
-                    }}>
-                        <h2 style={{ fontFamily: titleFont, fontSize: '2.5rem', color: themeColor, marginBottom: '1rem' }}>Código de Vestimenta</h2>
-                        <p style={{ fontSize: '1.1rem', color: '#555', lineHeight: '1.6' }}>
-                            {data.dressCode || 'Formal'}
-                        </p>
-                        {data.dressCodeDetails && (
-                            <p style={{ fontSize: '0.9rem', color: '#777', marginTop: '0.5rem' }}>
-                                {data.dressCodeDetails}
+    const renderDressCodeSection = () => {
+        const dressCodeData = getDressCodeById(data.dressCode);
+
+        return (
+            <section className="snap-section" style={{ ...sectionStyles, ...getBookPageStyle(2) }}>
+                <div style={{ width: '100%', maxWidth: '600px', margin: '0 auto', padding: '0 1rem', boxSizing: 'border-box', textAlign: 'center' }}>
+                    <ScrollReveal animation={data.animationStyle}>
+                        <div style={{
+                            padding: '2rem 1rem',
+                            background: currentTheme.contentOverlay || 'rgba(255,255,255,0.8)',
+                            borderRadius: '24px',
+                            backdropFilter: 'blur(10px)',
+                            boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.07)',
+                            marginBottom: '2rem',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center'
+                        }}>
+                            <h2 style={{ fontFamily: titleFont, fontSize: '2.5rem', color: themeColor, marginBottom: '1rem' }}>Código de Vestimenta</h2>
+
+                            {dressCodeData?.imageUrl && (
+                                <div
+                                    onClick={() => setLightboxImg(dressCodeData.imageUrl)}
+                                    title="Ver imagen completa"
+                                    style={{
+                                        width: '150px',
+                                        height: '150px',
+                                        borderRadius: '50%',
+                                        overflow: 'hidden',
+                                        marginBottom: '1rem',
+                                        border: `3px solid ${themeColor}`,
+                                        boxShadow: '0 4px 10px rgba(0,0,0,0.1)',
+                                        cursor: 'zoom-in',
+                                        transition: 'transform 0.2s'
+                                    }}
+                                    onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                                    onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                                >
+                                    <img
+                                        src={dressCodeData.imageUrl}
+                                        alt={dressCodeData.label}
+                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                    />
+                                </div>
+                            )}
+
+                            <p style={{ fontSize: '1.3rem', color: readableTextColor, fontWeight: 600, marginBottom: '0.5rem' }}>
+                                {dressCodeData ? dressCodeData.label : (data.dressCode || 'Formal')}
                             </p>
-                        )}
-                    </div>
-                </ScrollReveal>
-            </div>
-        </section>
-    );
+
+                            <p style={{ fontSize: '1rem', color: readableSubTextColor, lineHeight: '1.6', maxWidth: '80%', fontFamily: bodyFont }}>
+                                {data.dressCodeDetails || dressCodeData?.description}
+                            </p>
+                        </div>
+                    </ScrollReveal>
+                </div>
+            </section>
+        );
+    };
 
     const renderGallerySection = () => (
         <section className="snap-section" style={{ ...sectionStyles, ...getBookPageStyle(3) }}>
@@ -552,7 +745,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, isGuest = f
             <div style={{ width: '100%', maxWidth: '600px', margin: '0 auto', padding: '0 1rem 4rem 1rem', boxSizing: 'border-box', textAlign: 'center' }}>
                 {data.gallery && data.gallery.length > 0 && (
                     <div style={{ marginBottom: '3rem' }}>
-                        <ScrollReveal>
+                        <ScrollReveal animation={data.animationStyle}>
                             <h2 style={{ fontFamily: titleFont, fontSize: '2.5rem', color: themeColor, marginBottom: '1.5rem' }}>Nuestra Historia</h2>
                         </ScrollReveal>
                         <div style={{
@@ -562,7 +755,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, isGuest = f
                             padding: '0.5rem'
                         }}>
                             {data.gallery.map((img, index) => (
-                                <ScrollReveal key={index}>
+                                <ScrollReveal key={index} animation={data.animationStyle}>
                                     <div
                                         onClick={() => setLightboxImg(img)}
                                         style={{
@@ -584,10 +777,10 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, isGuest = f
                     </div>
                 )}
 
-                <ScrollReveal>
-                    <div style={{ marginTop: '2rem' }}>
+                <ScrollReveal animation={data.animationStyle}>
+                    <div style={{ marginTop: '2rem', display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
                         <button
-                            onClick={() => setShowConfirmModal(true)}
+                            onClick={() => { setConfirmAction('confirm'); setShowConfirmModal(true); }}
                             style={{
                                 background: themeColor,
                                 color: 'white',
@@ -611,25 +804,104 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, isGuest = f
         </section>
     );
 
+
+
+    // Helper: The Content inside the "Closed" state (Cover)
+    const coverContent = (
+        <div style={{
+            width: '100%', height: '100%',
+            background: 'white',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            position: 'relative', overflow: 'hidden',
+            borderRadius: '0px'
+        }}>
+            {/* Background */}
+            {(data.backgroundImageUrl || currentTheme.backgroundImage) && (
+                <div style={{
+                    position: 'absolute', inset: 0,
+                    backgroundImage: data.backgroundImageUrl ? `url(${data.backgroundImageUrl})` : (currentTheme.backgroundImage || 'none'),
+                    backgroundSize: 'cover', backgroundPosition: 'center', opacity: 0.5
+                }}></div>
+            )}
+
+            {/* Content */}
+            <div style={{ position: 'relative', zIndex: 1, textAlign: 'center', padding: '1rem', width: '100%', boxSizing: 'border-box' }}>
+                <h1 style={{ fontFamily: titleFont, fontSize: 'clamp(1.2rem, 3vw, 1.8rem)', color: themeColor, margin: '0 0 0.5rem 0', lineHeight: 1.2 }}>
+                    {data.partner1} <br /> <span style={{ fontSize: '0.7em', fontStyle: 'italic' }}>&</span> <br /> {data.partner2}
+                </h1>
+                <div style={{ margin: '0.5rem auto', width: '30px', height: '1px', background: themeColor }}></div>
+                <p style={{ fontSize: '0.8rem', color: '#444', textTransform: 'uppercase', letterSpacing: '1px', margin: 0 }}>
+                    {formatDate(data.date)}
+                </p>
+            </div>
+        </div>
+    );
+
+    const handleOpen = () => setShowEnvelope(false);
+    const openingStyle = data.envelope?.openingStyle || 'envelope';
+
     return (
         <div className="preview-container" style={containerStyles}>
-            {!isGuest && (
-                <div className="preview-controls" style={{ padding: '0.5rem', display: 'flex', gap: '0.5rem', zIndex: 10, position: 'absolute', top: 0, right: 0 }}>
-                    <button onClick={handleZoomOut} title="Alejar" style={{ padding: '0.5rem', borderRadius: '4px', border: '1px solid #ddd', cursor: 'pointer', background: 'white' }}><ZoomOut size={16} /></button>
-                    <button onClick={handleZoomIn} title="Acercar" style={{ padding: '0.5rem', borderRadius: '4px', border: '1px solid #ddd', cursor: 'pointer', background: 'white' }}><ZoomIn size={16} /></button>
+            {/* ... controls ... */}
+            {!isGuest && !isThumbnail && (
+                <div className="preview-controls" style={{ padding: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', zIndex: 10, position: 'absolute', top: '1rem', right: '1rem' }}>
+                    <button onClick={handleZoomOut} title="Alejar" style={{ padding: '0.5rem', borderRadius: '4px', border: '1px solid #ddd', cursor: 'pointer', background: 'white', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' }}><ZoomOut size={16} /></button>
+                    <button onClick={handleZoomIn} title="Acercar" style={{ padding: '0.5rem', borderRadius: '4px', border: '1px solid #ddd', cursor: 'pointer', background: 'white', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' }}><ZoomIn size={16} /></button>
+                    {data.envelope?.enabled && (
+                        <button
+                            onClick={() => setShowEnvelope(true)}
+                            title="Reiniciar Apertura"
+                            style={{
+                                padding: '0.5rem',
+                                borderRadius: '4px',
+                                border: '1px solid #ddd',
+                                cursor: 'pointer',
+                                background: 'white',
+                                boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
+                                color: '#555'
+                            }}
+                        >
+                            <RotateCcw size={16} />
+                        </button>
+                    )}
                 </div>
             )}
 
-            {/* Envelope Overlay */}
+            {/* Opening Experience Overlay */}
             {showEnvelope && (
-                <Envelope
-                    onOpen={() => setShowEnvelope(false)}
-                    senderName={`${data.partner1} & ${data.partner2}`}
-                    type={data.envelope?.type}
-                    material={data.envelope?.material}
-                    color={data.envelope?.color}
-                    finish={data.envelope?.finish}
-                />
+                <>
+                    {openingStyle === 'envelope' && (
+                        <Envelope
+                            onOpen={handleOpen}
+                            senderName={`${data.partner1} & ${data.partner2}`}
+                            type={data.envelope?.type}
+                            material={data.envelope?.material}
+                            color={data.envelope?.color}
+                            finish={data.envelope?.finish}
+                            liner={data.envelope?.liner}
+                            stamp={data.envelope?.stamp}
+                            seal={data.envelope?.seal}
+                        >
+                            {coverContent}
+                        </Envelope>
+                    )}
+                    {openingStyle === 'book' && (
+                        <BookOpen
+                            onOpen={handleOpen}
+                            coverColor={data.envelope?.color}
+                            senderName={`${data.partner1} & ${data.partner2}`}
+                        >
+                            {coverContent}
+                        </BookOpen>
+                    )}
+                    {openingStyle === 'crumple' && (
+                        <CrumpleReveal
+                            onOpen={handleOpen}
+                        >
+                            {coverContent}
+                        </CrumpleReveal>
+                    )}
+                </>
             )}
 
             <div
@@ -654,6 +926,9 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, isGuest = f
                         images={backgroundImages}
                         activeIndex={activeSection}
                         fallbackColor={themeColor}
+                        themeBackground={currentTheme.backgroundImage}
+                        blur={data.design?.blur}
+                        saturation={data.design?.saturation}
                     />
                 )}
 
@@ -683,25 +958,41 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, isGuest = f
                             <div style={{
                                 position: 'absolute', inset: 0,
                                 backfaceVisibility: 'hidden',
-                                backgroundColor: data.backgroundImageUrl ? 'white' : '#FAF7F2', // White base for images
-                                backgroundImage: data.backgroundImageUrl
-                                    ? `url(${data.backgroundImageUrl})`
-                                    : `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E")`,
-                                backgroundSize: data.backgroundImageUrl ? 'cover' : 'auto',
-                                backgroundPosition: 'center',
-                                boxShadow: 'inset 0 0 40px rgba(0,0,0,0.05), 0 20px 50px rgba(0,0,0,0.1)', // Soft depth + inner vignette
-                                borderRadius: '2px', // Sharper corners for paper feel
+                                backgroundColor: data.design?.backgroundColor || (data.backgroundImageUrl || currentTheme.backgroundImage ? 'white' : '#FAF7F2'),
+                                boxShadow: 'inset 0 0 40px rgba(0,0,0,0.05), 0 20px 50px rgba(0,0,0,0.1)',
+                                border: data.design?.borderStyle === 'double' ? `6px double ${data.design?.borderColor || themeColor}` : (data.design?.borderStyle === 'solid' ? `1px solid ${data.design?.borderColor || themeColor}` : 'none'),
+                                borderRadius: data.design?.corners === 'square' ? '0px' : '4px',
                                 display: 'flex', flexDirection: 'column',
                                 overflow: 'hidden',
                                 zIndex: 2
                             }}>
+                                {/* Background Image Layer */}
+                                <div style={{
+                                    position: 'absolute', inset: 0,
+                                    backgroundImage: data.design?.backgroundImage ? `url(${data.design.backgroundImage})` : (data.backgroundImageUrl ? `url(${data.backgroundImageUrl})` : (currentTheme.backgroundImage || `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E")`)),
+                                    backgroundSize: 'cover',
+                                    backgroundPosition: 'center',
+                                    filter: `blur(${data.design?.blur || 0}px) saturate(${data.design?.saturation ?? 100}%)`,
+                                    zIndex: 0
+                                }} />
+
+                                {/* Custom Overlay */}
+                                <div style={{
+                                    position: 'absolute', inset: '15px',
+                                    borderRadius: data.design?.corners === 'square' ? '0px' : '2px',
+                                    zIndex: 1,
+                                    border: data.design?.borderStyle === 'gold-frame' ? '2px solid #D4AF37' : 'none',
+                                    backgroundColor: renderOverlayBackground(data.design?.overlayOpacity),
+                                }}></div>
+
                                 {!data.imageUrl && (
                                     <div style={{
                                         position: 'absolute', top: '15px', left: '15px', right: '15px', bottom: '15px',
-                                        border: `1px solid ${themeColor}`, pointerEvents: 'none', opacity: 0.5, zIndex: 10
+                                        border: data.design?.borderStyle === 'floral' ? `1px solid ${data.design?.borderColor || themeColor}` : 'none',
+                                        pointerEvents: 'none', opacity: 0.5, zIndex: 10
                                     }}></div>
                                 )}
-                                <div style={{ flex: 1, overflowY: 'auto' }}>
+                                <div style={{ flex: 1, overflowY: 'auto', position: 'relative', zIndex: 2 }}>
                                     {renderIntroSection()}
                                 </div>
                             </div>
@@ -710,26 +1001,42 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, isGuest = f
                             <div style={{
                                 position: 'absolute', inset: 0,
                                 backfaceVisibility: 'hidden',
-                                backgroundColor: data.backgroundImageUrl ? 'white' : '#FAF7F2', // Warm rustic paper
-                                backgroundImage: data.backgroundImageUrl
-                                    ? `url(${data.backgroundImageUrl})`
-                                    : `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E")`,
-                                backgroundSize: data.backgroundImageUrl ? 'cover' : 'auto',
-                                backgroundPosition: 'center',
+                                backgroundColor: (data.backgroundImageUrl || currentTheme.backgroundImage) ? 'white' : '#FAF7F2', // Warm rustic paper
                                 boxShadow: 'inset 0 0 40px rgba(0,0,0,0.05), 0 20px 50px rgba(0,0,0,0.1)', // Soft depth + inner vignette
+                                border: currentTheme.borderStyle || 'none', // Apply theme border
                                 borderRadius: '2px', // Sharper corners for paper feel
                                 transform: 'rotateY(180deg)',
                                 display: 'flex', flexDirection: 'column',
                                 overflow: 'hidden',
                                 zIndex: 1
                             }}>
+                                {/* Background Image Layer */}
+                                <div style={{
+                                    position: 'absolute', inset: 0,
+                                    backgroundImage: data.backgroundImageUrl
+                                        ? `url(${data.backgroundImageUrl})`
+                                        : (currentTheme.backgroundImage || `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E")`),
+                                    backgroundSize: data.backgroundImageUrl ? 'cover' : (currentTheme.backgroundImage ? 'cover' : 'auto'),
+                                    backgroundPosition: 'center',
+                                    filter: `blur(${data.design?.blur || 0}px) saturate(${data.design?.saturation ?? 100}%)`,
+                                    zIndex: 0
+                                }} />
+
+                                {/* Content Overlay for Readability */}
+                                <div style={{
+                                    position: 'absolute', inset: '15px', // Margin for overlay
+                                    backgroundColor: currentTheme.contentOverlay || 'rgba(255,255,255,0.0)', // Theme overlay or transparent
+                                    borderRadius: '2px',
+                                    zIndex: 1
+                                }}></div>
+
                                 {!data.imageUrl && (
                                     <div style={{
                                         position: 'absolute', top: '15px', left: '15px', right: '15px', bottom: '15px',
                                         border: `1px solid ${themeColor}`, pointerEvents: 'none', opacity: 0.5, zIndex: 10
                                     }}></div>
                                 )}
-                                <div style={{ flex: 1, overflowY: 'auto' }}>
+                                <div ref={backFaceRef} style={{ flex: 1, overflowY: 'auto', position: 'relative', zIndex: 2 }}> {/* Content above overlay */}
                                     {renderDetailsSection()}
                                     {renderDressCodeSection()}
                                     {renderGallerySection()}
@@ -827,23 +1134,62 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, isGuest = f
                                 ) : (
                                     // SINGLE GUEST MODE (Legacy)
                                     !guest && (
-                                        <input
-                                            type="text"
-                                            autoFocus
-                                            placeholder="Ej: Juan Pérez y María González"
-                                            value={guestName}
-                                            onChange={(e) => setGuestName(e.target.value)}
-                                            onKeyDown={(e) => e.key === 'Enter' && handleConfirmation()}
-                                            style={{
-                                                width: '100%',
-                                                padding: '1rem',
-                                                border: '1px solid #ddd',
-                                                borderRadius: '8px',
-                                                fontSize: '1rem',
-                                                marginBottom: '1.5rem',
-                                                outline: 'none'
-                                            }}
-                                        />
+                                        <>
+                                            <input
+                                                type="text"
+                                                autoFocus
+                                                placeholder="Ej: Juan Pérez y María González"
+                                                value={guestName}
+                                                onChange={(e) => setGuestName(e.target.value)}
+                                                onKeyDown={(e) => e.key === 'Enter' && handleConfirmation()}
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '1rem',
+                                                    border: '1px solid #ddd',
+                                                    borderRadius: '8px',
+                                                    fontSize: '1rem',
+                                                    marginBottom: '1rem', // Reduced margin
+                                                    outline: 'none'
+                                                }}
+                                            />
+                                            {/* Message Input */}
+                                            <textarea
+                                                placeholder="Deja un mensaje para los novios (opcional)..."
+                                                value={rsvpMessage}
+                                                onChange={(e) => setRsvpMessage(e.target.value)}
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '0.8rem',
+                                                    border: '1px solid #ddd',
+                                                    borderRadius: '8px',
+                                                    fontSize: '0.9rem',
+                                                    marginBottom: '1.5rem',
+                                                    outline: 'none',
+                                                    resize: 'vertical',
+                                                    minHeight: '80px',
+                                                    fontFamily: 'inherit'
+                                                }}
+                                            />
+
+                                            <button
+                                                onClick={() => handleConfirmation()}
+                                                disabled={!guest && !guestName.trim()}
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '1rem',
+                                                    backgroundColor: (!guest && !guestName.trim()) ? '#ccc' : (confirmAction === 'confirm' ? '#2D2A26' : '#E53935'),
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    borderRadius: '8px',
+                                                    fontWeight: 600,
+                                                    fontSize: '1rem',
+                                                    cursor: (!guest && !guestName.trim()) ? 'not-allowed' : 'pointer',
+                                                    transition: 'all 0.2s'
+                                                }}
+                                            >
+                                                {confirmAction === 'confirm' ? 'ENVIAR CONFIRMACIÓN' : 'ENVIAR AVISO'}
+                                            </button>
+                                        </>
                                     )
                                 )}
 
@@ -889,6 +1235,40 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, isGuest = f
                                         // Default Logic
                                         handleConfirmation();
                                     }}
+                                    disabled={!guest && !guestName.trim()}
+                                    style={{
+                                        width: '100%',
+                                        padding: '1rem',
+                                        backgroundColor: (!guest && !guestName.trim()) ? '#ccc' : (confirmAction === 'confirm' ? '#2D2A26' : '#E53935'),
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '8px',
+                                        fontWeight: 600,
+                                        fontSize: '1rem',
+                                        cursor: (!guest && !guestName.trim()) ? 'not-allowed' : 'pointer',
+                                        transition: 'all 0.2s'
+                                    }}
+                                    {/* Message Input */}
+                                    <textarea
+                                    placeholder="Deja un mensaje para los novios (opcional)..."
+                                    value={rsvpMessage}
+                                    onChange={(e) => setRsvpMessage(e.target.value)}
+                                    style={{
+                                        width: '100%',
+                                        padding: '0.8rem',
+                                        border: '1px solid #ddd',
+                                        borderRadius: '8px',
+                                        fontSize: '0.9rem',
+                                        marginBottom: '1.5rem',
+                                        outline: 'none',
+                                        resize: 'vertical',
+                                        minHeight: '80px',
+                                        fontFamily: 'inherit'
+                                    }}
+                                />
+
+                                <button
+                                    onClick={() => handleConfirmation()} // Simplified call
                                     disabled={!guest && !guestName.trim()}
                                     style={{
                                         width: '100%',

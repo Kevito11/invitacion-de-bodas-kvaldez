@@ -5,9 +5,23 @@ interface EnvelopeProps {
     onOpen: () => void;
     senderName?: string;
     type?: 'classic' | 'pointed' | 'square' | 'rounded';
-    material?: 'paper' | 'linen' | 'velvet' | 'cardstock';
+    material?: 'paper' | 'linen' | 'velvet' | 'cardstock' | 'vintage';
     color?: string;
     finish?: 'matte' | 'glossy' | 'metallic';
+    liner?: {
+        type: 'color' | 'image' | 'upload';
+        value: string;
+    };
+    stamp?: {
+        enabled: boolean;
+        url?: string;
+    };
+    seal?: {
+        enabled: boolean;
+        color: string;
+        text?: string;
+    };
+    children?: React.ReactNode;
 }
 
 const Envelope: React.FC<EnvelopeProps> = ({
@@ -16,243 +30,425 @@ const Envelope: React.FC<EnvelopeProps> = ({
     type = 'classic',
     material = 'paper',
     color = '#F5E6D3',
-    finish = 'matte'
+    finish = 'matte',
+    liner,
+    stamp,
+    seal,
+    children
 }) => {
     const [step, setStep] = useState<'front' | 'flipping' | 'back' | 'opening' | 'extracting' | 'revealing' | 'done'>('front');
+
+    // -- TEXTURE & FINISH HELPERS --
+    // Wall/Plaster Texture: Fractal Noise to simulate "wall imperfections"
+    const texture = `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.3'/%3E%3C/svg%3E")`;
+
+    const getFinishOverlay = () => {
+        switch (finish) {
+            case 'glossy': return 'linear-gradient(135deg, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0) 45%, rgba(255,255,255,0) 100%)';
+            case 'metallic': return 'linear-gradient(45deg, rgba(255,255,255,0) 30%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0) 70%)';
+            default: return 'none'; // Matte is default, no extra shine
+        }
+    };
+
+    const getFlapClipPath = () => {
+        switch (type) {
+            case 'pointed': return 'polygon(0 0, 50% 85%, 100% 0)'; // Deep point
+            case 'square': return 'polygon(0 0, 0 65%, 100% 65%, 100% 0)'; // Rectangular (exceeds 62%)
+            case 'rounded': return 'circle(90% at 50% 0)'; // Rounded
+            default: return 'polygon(0 0, 50% 70%, 100% 0)'; // Classic point (70% > 62% pocket dip) ensures overlap
+        }
+    };
 
     // Animation Sequence
     const handleClick = () => {
         if (step !== 'front') return;
-
-        // 1. Flip Envelope
         setStep('flipping');
+
+        // Realistic timing sequence
+        setTimeout(() => setStep('back'), 1500);
+        setTimeout(() => setStep('opening'), 2200);
+        setTimeout(() => setStep('extracting'), 3200);
+        setTimeout(() => setStep('revealing'), 4500);
         setTimeout(() => {
-            setStep('back');
-
-            // 2. Open Flap (after short pause)
-            setTimeout(() => {
-                setStep('opening');
-
-                // 3. Extract Letter
-                setTimeout(() => {
-                    setStep('extracting');
-
-                    // 4. Reveal/Flip Letter
-                    setTimeout(() => {
-                        setStep('revealing');
-
-                        // 5. Finish
-                        setTimeout(() => {
-                            setStep('done');
-                            // Wait for the opacity transition (1.5s) to mostly complete before unmounting
-                            setTimeout(() => {
-                                onOpen();
-                            }, 1200);
-                        }, 1500); // Time for final read/fade
-                    }, 1500); // Slide duration
-                }, 800); // Flap opening duration
-            }, 500); // Pause after flip
-        }, 1200); // Flip duration
+            setStep('done');
+            setTimeout(onOpen, 1000);
+        }, 8000);
     };
 
-    // Textures
-    const getTexture = () => {
-        switch (material) {
-            case 'linen': return 'repeating-linear-gradient(45deg, rgba(0,0,0,0.02) 0px, rgba(0,0,0,0.02) 2px, transparent 2px, transparent 4px)';
-            case 'velvet': return 'radial-gradient(circle, rgba(255,255,255,0.05) 0%, rgba(0,0,0,0.1) 100%)';
-            case 'cardstock': return 'url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPgo8cmVjdCB3aWR0aD0iNCIgaGVpZ2h0PSI0IiBmaWxsPSIjMDAwIiBmaWxsLW9wYWNpdHk9IjAuMDIiLz4KPC9zdmc+")';
-            default: return 'none';
-        }
-    };
-
-    const getFinish = () => {
-        switch (finish) {
-            case 'glossy': return 'linear-gradient(135deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0) 50%, rgba(255,255,255,0) 100%)';
-            case 'metallic': return 'linear-gradient(45deg, rgba(255,255,255,0) 40%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0) 60%)';
-            default: return 'none';
-        }
-    };
-
-    const getFlapPath = () => {
-        switch (type) {
-            case 'pointed': return 'polygon(0 0, 50% 100%, 100% 0)';
-            case 'square': return 'polygon(0 0, 0 100%, 100% 100%, 100% 0)';
-            case 'rounded': return 'ellipse(80% 100% at 50% 0)';
-            default: return 'polygon(0 0, 50% 65%, 100% 0)';
-        }
-    };
-
-    const flapHeight = type === 'pointed' ? '55%' : type === 'square' ? '45%' : '50%';
-
-    // Animation States
     const isFlipped = step !== 'front';
     const isOpening = ['opening', 'extracting', 'revealing', 'done'].includes(step);
     const isExtracting = ['extracting', 'revealing', 'done'].includes(step);
     const isRevealing = ['revealing', 'done'].includes(step);
     const isDone = step === 'done';
 
+    // Base Style
+    const finishOverlay = getFinishOverlay();
+
+    const paperStyle: React.CSSProperties = {
+        backgroundColor: color,
+        backgroundImage: texture,
+        backgroundBlendMode: 'multiply', // Using soft-light/multiply for textures to blend naturally
+        position: 'absolute',
+        boxShadow: 'inset 0 0 40px rgba(0,0,0,0.06)', // Softer vignette
+    };
+
+    // Shine overlay style
+    const shineStyle: React.CSSProperties = {
+        position: 'absolute', inset: 0,
+        backgroundImage: finishOverlay,
+        pointerEvents: 'none',
+        mixBlendMode: 'screen', // Better for gloss
+        zIndex: 2
+    };
+
+    // Dynamic coloring fix for dark inputs
+    const isDarkColor = (colorCode: string) => {
+        // Default to false if no color
+        if (!colorCode) return false;
+
+        // Handle standard CSS names if needed? ideally hex
+        if (!colorCode.startsWith('#')) return false;
+
+        const hex = colorCode.replace('#', '');
+        const r = parseInt(hex.substring(0, 2), 16);
+        const g = parseInt(hex.substring(2, 4), 16);
+        const b = parseInt(hex.substring(4, 6), 16);
+
+        // YIQ equation
+        const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+        return yiq < 128;
+    };
+
+    const isDark = isDarkColor(color || '#F5E6D3');
+    const textColor = isDark ? 'rgba(255,255,255,0.9)' : (material === 'vintage' ? '#5D4037' : '#333');
+    const secondaryTextColor = isDark ? 'rgba(255,255,255,0.6)' : '#777';
+    const textBlendMode = isDark ? 'normal' : 'multiply';
+    const textShadow = isDark ? '0 1px 2px rgba(0,0,0,0.5)' : '0 1px 0 rgba(255,255,255,0.6)';
+
     return (
-        <div style={{
-            position: 'absolute',
-            inset: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: '#2D2A26',
-            zIndex: 1000,
-            transition: 'all 1.5s cubic-bezier(0.19, 1, 0.22, 1) 0.5s', // Smooth slide up
-            opacity: isDone ? 0 : 1,
-            transform: isDone ? 'translateY(-100%)' : 'translateY(0)',
-            pointerEvents: isDone ? 'none' : 'auto',
-            perspective: '1500px' // Essential for 3D
-        }}>
+        <div
+            onClick={handleClick}
+            style={{
+                position: 'absolute', inset: 0, zIndex: 1000,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                backgroundColor: '#000', // Solid Black as requested
+                // backdropFilter removed to prevent 3D flattening issues
+                opacity: isDone ? 0 : 1,
+                pointerEvents: isDone ? 'none' : 'auto',
+                cursor: step === 'front' ? 'pointer' : 'default', // Cursor pointer on whole screen
+                transition: 'opacity 1s ease-out',
+                perspective: '1500px'
+            }}>
             <div
-                onClick={handleClick}
                 style={{
-                    width: 'min(90%, 500px)',
-                    aspectRatio: '1.5/1',
+                    width: 'min(90vw, 550px)',
+                    aspectRatio: '1.6/1',
                     position: 'relative',
-                    cursor: 'pointer',
                     transformStyle: 'preserve-3d',
                     transition: 'transform 1.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                    transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
+                    transform: isFlipped
+                        ? `rotateY(180deg) ${isOpening ? 'rotateX(5deg)' : ''} ${isRevealing ? 'translateY(250px)' : (isOpening ? 'translateY(20px) translateZ(10px)' : '')}`
+                        : 'rotateY(0deg) rotateX(0deg) rotateZ(0deg)'
                 }}
             >
-                {/* === FRONT FACE (Names) === */}
-                <div style={{
-                    position: 'absolute', inset: 0,
-                    backgroundColor: color,
-                    backgroundImage: `${getFinish()}, ${getTexture()}`,
-                    backgroundBlendMode: 'overlay',
-                    borderRadius: '4px',
-                    backfaceVisibility: 'hidden', // Hide when flipped
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                    boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
-                    zIndex: 20
-                }}>
-                    <div style={{ border: '1px solid rgba(0,0,0,0.1)', width: '90%', height: '90%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <h2 style={{
-                            fontFamily: "'Playfair Display', serif",
-                            fontSize: 'clamp(1.2rem, 5vw, 1.8rem)',
-                            color: '#5D4037',
-                            textAlign: 'center',
-                            margin: 0
-                        }}>
-                            {senderName || 'Invitación'}
-                        </h2>
-                    </div>
-                </div>
-
-                {/* === BACK FACE (Flap & Letter) === */}
+                {/* === FRONT FACE (Address Side) === */}
                 <div style={{
                     position: 'absolute', inset: 0,
                     backfaceVisibility: 'hidden',
-                    transform: 'rotateY(180deg)', // Pre-flipped
-                    transformStyle: 'preserve-3d',
-                    zIndex: 10
+                    zIndex: 2,
+                    borderRadius: '3px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    boxShadow: '0 20px 40px rgba(0,0,0,0.15), 0 5px 15px rgba(0,0,0,0.05)',
+                    // Positive Z sends it towards user (World +Z)
+                    transform: 'rotateY(0deg) translateZ(2px)',
+                    backgroundColor: color || '#F5E6D3',
                 }}>
-                    {/* The Envelope Box (Backside) */}
+                    {/* Opaque Blocker using color (prevents blend mode bleed) */}
+                    <div style={{ position: 'absolute', inset: 0, backgroundColor: color || '#F5E6D3', borderRadius: '3px' }}></div>
+
+                    {/* Texture Layer */}
                     <div style={{
-                        position: 'absolute', inset: 0,
-                        backgroundColor: color,
-                        backgroundImage: `${getFinish()}, ${getTexture()}`,
-                        backgroundBlendMode: 'overlay',
-                        borderRadius: '4px',
-                        boxShadow: '0 20px 50px rgba(0,0,0,0.3)',
+                        ...paperStyle,
+                        inset: 0,
+                        zIndex: 1,
+                        opacity: 0.5, // Reduced opacity so it's a texture, not a pattern
+                        mixBlendMode: 'multiply' // Multiply burns the texture into the color like ink/stucco
+                    }}></div>
+
+                    <div style={shineStyle}></div>
+                    <div style={{
+                        border: `1px solid ${isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)'}`,
+                        width: '92%', height: '88%',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        flexDirection: 'column',
+                        zIndex: 10, position: 'relative'
                     }}>
-                        {/* Letter Container (Inside) */}
-                        <div style={{
-                            position: 'absolute', inset: 0, overflow: 'visible',
-                            display: 'flex', justifyContent: 'center'
-                        }}>
-                            {/* THE LETTER */}
+                        {/* CUSTOM STAMP */}
+                        {stamp?.enabled && stamp.url ? (
                             <div style={{
-                                width: '90%', height: '90%',
-                                backgroundColor: '#FAF7F2',
-                                backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'100\' height=\'100\' viewBox=\'0 0 100 100\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noise\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.8\' numOctaves=\'3\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100\' height=\'100\' filter=\'url(%23noise)\' opacity=\'0.08\'/%3E%3C/svg%3E")',
-                                borderRadius: '2px',
-                                boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-                                position: 'absolute',
-                                top: '5%',
-                                transition: 'all 1.5s cubic-bezier(0.25, 1, 0.5, 1)',
-                                transform: isExtracting
-                                    ? (isRevealing ? 'translateY(-220px) rotateY(180deg) scale(1.1)' : 'translateY(-150px)')
-                                    : 'translateY(0)',
-                                zIndex: 5,
+                                position: 'absolute', top: '10px', right: '10px',
+                                width: '60px', height: '70px',
+                                backgroundImage: `url(${stamp.url})`,
+                                backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundPosition: 'center',
+                                filter: 'drop-shadow(1px 1px 2px rgba(0,0,0,0.2))',
+                                transform: 'rotate(2deg)'
+                            }}></div>
+                        ) : (
+                            /* Default Fake Stamp/Postmark if no custom stamp */
+                            <div style={{
+                                position: 'absolute', top: '15px', right: '15px',
+                                width: '50px', height: '60px',
+                                border: `1px dashed ${secondaryTextColor}`,
+                                opacity: 0.5,
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                backfaceVisibility: 'visible' // Allow seeing both sides if we wanted, or hidden
+                                fontSize: '0.6rem', color: secondaryTextColor,
+                                transform: 'rotate(-5deg)'
                             }}>
-                                {/* Letter Content - Front (Hidden initially if we rotate?) 
-                                    Wait, if we rotateY(180deg) the letter, we see its "back" if backface is visible.
-                                    Let's assume the letter starts "facing in" (so we see its back). 
-                                    No, usually letters face out.
-                                    The user wants "la carta gire para abirse". 
-                                    Let's make it spin. 
-                                */}
+                                STAMP
+                            </div>
+                        )}
+
+                        <h2 style={{
+                            fontFamily: "'Playfair Display', serif",
+                            fontSize: 'clamp(1.5rem, 5vw, 2.5rem)',
+                            color: textColor,
+                            margin: 0, opacity: 0.9,
+                            textShadow: textShadow,
+                            mixBlendMode: textBlendMode as any
+                        }}>
+                            {senderName || 'Para ti'}
+                        </h2>
+                        <div style={{
+                            fontFamily: 'monospace', fontSize: '0.75rem',
+                            color: secondaryTextColor,
+                            marginTop: '1rem', letterSpacing: '4px', textTransform: 'uppercase',
+                            borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.3)' : '#aaa'}`,
+                            paddingTop: '0.5rem',
+                            mixBlendMode: textBlendMode as any
+                        }}>
+                            Entrega Especial
+                        </div>
+                    </div>
+                </div>
+
+                {/* === BACK FACE (Flap Side) === */}
+                <div style={{
+                    position: 'absolute', inset: 0,
+                    // Rotate 180. Positive Z here means Local +Z, which is World -Z (Away from user)
+                    // This correct separates Front (World +2) and Back (World -2) by 4px.
+                    transform: 'rotateY(180deg) translateZ(2px)',
+                    transformStyle: 'preserve-3d',
+                    backfaceVisibility: 'hidden',
+                    zIndex: 1,
+                    backgroundColor: color || '#F5E6D3',
+                }}>
+                    {/* Opaque Blocker */}
+                    <div style={{ position: 'absolute', inset: 0, backgroundColor: color || '#F5E6D3', borderRadius: '3px', backfaceVisibility: 'hidden' }}></div>
+
+                    {/* Realistic Shadow beneath for when it opens */}
+                    <div style={{
+                        position: 'absolute', inset: '20px', background: 'rgba(0,0,0,0.2)', filter: 'blur(30px)', transform: 'translateZ(-50px)'
+                    }}></div>
+
+                    {/* Envelope Body (Exterior Back) - Becomes visible as "Inside" when top flap opens */}
+                    <div style={{
+                        ...paperStyle,
+                        inset: 0,
+                        borderRadius: '3px',
+                        zIndex: 1,
+                        backfaceVisibility: 'hidden',
+                        // Deeper Inner Shadow
+                        boxShadow: 'inset 0 10px 40px rgba(0,0,0,0.2)',
+                    }}>
+                        {/* FOLD CREASE: Gradient to simulate a physical groove */}
+                        <div style={{
+                            position: 'absolute', top: 0, left: 0, right: 0, height: '4px',
+                            background: 'linear-gradient(to bottom, rgba(0,0,0,0.15), transparent)',
+                            zIndex: 2
+                        }}></div>
+                        <div style={shineStyle}></div>
+                    </div>
+
+                    {/* CARD / LETTER */}
+                    <div style={{
+                        position: 'absolute',
+                        left: '4%', right: '4%',
+                        top: '4%', bottom: '4%',
+                        zIndex: 5,
+                        transformStyle: 'preserve-3d',
+                        // Hide card COMPLETELY until opening starts to prevent "seeing through"
+                        opacity: isOpening ? 1 : 0,
+                        transition: 'opacity 0.2s ease-in, transform 1.2s cubic-bezier(0.4, 0, 0.2, 1)', // Fade in quickly on open
+                        transform: isExtracting
+                            ? (isRevealing
+                                ? 'translateY(-250px) translateZ(200px) rotateX(0deg) rotateY(180deg) scale(1.15)' // FLIP HERE
+                                : 'translateY(-60%) translateZ(10px)')
+                            : 'translateY(0) translateZ(2px)',
+                    }}>
+                        {/* Card Container (Double Sided) */}
+                        <div style={{
+                            position: 'relative', width: '100%', height: '100%',
+                            transformStyle: 'preserve-3d',
+                        }}>
+                            {/* Card BACK (Design/KP - Visible initially when envelope is Back-facing) */}
+                            <div style={{
+                                position: 'absolute', inset: 0,
+                                backgroundColor: '#e6dfd5',
+                                backgroundImage: `repeating-linear-gradient(45deg, rgba(0,0,0,0.02) 0px, rgba(0,0,0,0.02) 2px, transparent 2px, transparent 4px), ${texture}`,
+                                backfaceVisibility: 'hidden',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                // FIX: This must be 180deg so that (180+180 = 360) it faces the viewer initially
+                                transform: 'rotateY(180deg)',
+                                borderRadius: '2px',
+                                // Sharper Border
+                                border: '1px solid rgba(0,0,0,0.2)',
+                                boxShadow: 'inset 0 0 20px rgba(0,0,0,0.1)'
+                            }}>
+                                {/* Opaque Blocker */}
+                                <div style={{ position: 'absolute', inset: 0, backgroundColor: '#e6dfd5', borderRadius: '2px', backfaceVisibility: 'hidden' }}></div>
+
                                 <div style={{
-                                    padding: '1rem', textAlign: 'center', border: '1px solid #D4AF37', width: '85%', height: '85%',
-                                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                                    transition: 'opacity 0.5s',
-                                    opacity: isRevealing ? 1 : 0.5 // Dim until revealed
+                                    width: '50px', height: '50px',
+                                    border: '2px solid rgba(0,0,0,0.2)',
+                                    borderRadius: '50%',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    color: 'rgba(0,0,0,0.4)', fontWeight: 'bold', fontFamily: 'serif',
+                                    zIndex: 2, transform: 'translateZ(1px)' // Pop out
                                 }}>
-                                    <span style={{ fontFamily: "'Playfair Display', serif", fontSize: '0.8rem', color: '#888' }}>LEER INVITACIÓN</span>
+                                    {senderName
+                                        ? senderName.split('&').map(n => n.trim()[0]).join('')
+                                        : 'KP'}
+                                </div>
+                            </div>
+
+                            {/* Card FRONT (Content - Hidden initially, revealed after flip) */}
+                            <div style={{
+                                position: 'absolute', inset: 0,
+                                backgroundColor: '#fff',
+                                backfaceVisibility: 'hidden',
+                                // FIX: This must be 0deg so that (0+180 = 180) it faces AWAY initially
+                                transform: 'rotateY(0deg)',
+                                borderRadius: '2px',
+                                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                                // Subtle border for definition
+                                border: '1px solid rgba(0,0,0,0.1)',
+                                boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
+                            }}>
+                                <div style={{
+                                    width: '100%', height: '100%',
+                                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'
+                                }}>
+                                    {children ? children : (
+                                        <div style={{ padding: '2rem', textAlign: 'center' }}>
+                                            <span style={{ fontFamily: "'Playfair Display', serif", fontSize: '1.5rem', color: '#333' }}>Invitación</span>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
-
-                        {/* Pocket/Fold */}
-                        <div style={{
-                            position: 'absolute', bottom: 0, left: 0, right: 0, top: 0,
-                            clipPath: 'polygon(0 0, 50% 50%, 100% 0, 100% 100%, 0 100%)',
-                            backgroundColor: color,
-                            backgroundImage: `${getFinish()}, ${getTexture()}`,
-                            filter: 'brightness(1.02)',
-                            zIndex: 15,
-                            pointerEvents: 'none'
-                        }}></div>
-
-                        {/* Shadow Gradient on Pocket */}
-                        <div style={{
-                            position: 'absolute', bottom: 0, left: 0, right: 0, top: 0,
-                            clipPath: 'polygon(0 0, 50% 50%, 100% 0, 100% 100%, 0 100%)',
-                            background: 'linear-gradient(to top, rgba(0,0,0,0.1), transparent)',
-                            zIndex: 16,
-                            pointerEvents: 'none'
-                        }}></div>
                     </div>
+
+
+                    {/* Side/Bottom Flaps (Pocket) */}
+                    <div style={{
+                        ...paperStyle,
+                        clipPath: 'polygon(0 100%, 100% 100%, 100% 38%, 50% 62%, 0 38%)',
+                        inset: 0,
+                        zIndex: 10,
+                        // Add a gradient to simulate the shadow cast by the top flap
+                        backgroundImage: `linear-gradient(to bottom, rgba(0,0,0,0.05), transparent 20%), ${texture}`,
+                        transform: 'translateZ(10px)',
+                        // Much sharper/darker drop shadow for clearer definition
+                        filter: 'contrast(1.05) drop-shadow(0 -2px 3px rgba(0,0,0,0.3))',
+                        backfaceVisibility: 'hidden'
+                    }}>
+                        <div style={{
+                            position: 'absolute', top: '38%', left: 0, right: 0, height: '1px',
+                            background: 'rgba(0,0,0,0.1)', // Subtle rim line
+                            zIndex: 2
+                        }}></div>
+                        <div style={{ ...shineStyle, opacity: 0.5 }}></div>
+                    </div>
+
 
                     {/* Top Flap */}
                     <div style={{
-                        position: 'absolute', top: 0, left: 0, width: '100%', height: flapHeight,
-                        backgroundColor: color,
-                        backgroundImage: `${getFinish()}, ${getTexture()}`,
-                        filter: 'brightness(0.95)',
-                        clipPath: getFlapPath(),
+                        ...paperStyle,
+                        height: '100%', width: '100%', top: 0, left: 0,
+                        clipPath: getFlapClipPath(),
                         transformOrigin: 'top',
                         transform: isOpening ? 'rotateX(180deg)' : 'rotateX(0deg)',
-                        transition: 'transform 0.8s ease-in-out',
+                        transition: 'transform 0.9s cubic-bezier(0.4, 0, 0.2, 1)',
                         zIndex: 20,
+                        // High contrast shadow for the main flap
+                        filter: `${isOpening ? 'brightness(0.95)' : 'brightness(1.02)'} drop-shadow(0 4px 6px rgba(0,0,0,0.4))`,
                         backfaceVisibility: 'hidden'
-                    }}></div>
-
-                    {/* Wax Seal */}
-                    <div style={{
-                        position: 'absolute', top: type === 'square' ? '45%' : '40%', left: 'calc(50% - 25px)',
-                        width: '50px', height: '50px',
-                        backgroundColor: '#C41E3A', borderRadius: '50%',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        boxShadow: '0 4px 10px rgba(0,0,0,0.3)', border: '2px solid rgba(0,0,0,0.1)',
-                        zIndex: 25,
-                        transition: 'opacity 0.5s',
-                        opacity: isOpening ? 0 : 1,
-                        pointerEvents: 'none'
                     }}>
-                        <Heart color="#fff" size={24} fill="#fff" />
+                        <div style={shineStyle}></div>
+
+                        {/* WAX SEAL */}
+                        {(seal?.enabled !== false) && (
+                            <div style={{
+                                position: 'absolute',
+                                top: '40%',
+                                left: 'calc(50% - 22px)',
+                                width: '45px', height: '45px',
+                                background: seal?.color
+                                    ? `radial-gradient(circle at 35% 35%, ${seal.color}, ${adjustColor(seal.color, -40)})`
+                                    : 'radial-gradient(circle at 35% 35%, #D73838, #8B0000)',
+                                borderRadius: '50%',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                boxShadow: '1px 3px 6px rgba(0,0,0,0.3)',
+                                zIndex: 25,
+                                opacity: isOpening ? 0 : 1,
+                                transition: 'opacity 0.3s',
+                                transform: 'translateZ(2px)'
+                            }}>
+                                {/* Realistic Seal Ring */}
+                                <div style={{
+                                    position: 'absolute', inset: '4px', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '50%'
+                                }}></div>
+                                {seal?.text ? (
+                                    <span style={{
+                                        color: 'rgba(255,255,255,0.9)',
+                                        fontFamily: 'serif',
+                                        fontSize: '1.2rem',
+                                        fontWeight: 'bold',
+                                        textShadow: '0 1px 1px rgba(0,0,0,0.5)'
+                                    }}>
+                                        {seal.text}
+                                    </span>
+                                ) : (
+                                    <Heart size={18} color="rgba(255,255,255,0.9)" fill="rgba(255,255,255,0.15)" />
+                                )}
+                            </div>
+                        )}
                     </div>
+
+                    {/* Inner Liner (Visible when flap opens) */}
+                    <div style={{
+                        position: 'absolute', top: 0, left: 0, width: '100%', height: '52%',
+                        backgroundColor: (liner?.type === 'color' && liner.value) ? liner.value : '#FEFCF5', // Creamy white default
+                        opacity: 1,
+                        clipPath: 'polygon(0 0, 50% 50%, 100% 0)',
+                        zIndex: 0,
+                        transform: 'translateZ(-1px)',
+                        // Liner pattern (only if not image)
+                        backgroundImage: (liner?.type === 'image' || liner?.type === 'upload') && liner.value
+                            ? `url(${liner.value})`
+                            : (liner?.type === 'color' ? 'none' : `repeating-linear-gradient(90deg, transparent, transparent 19px, rgba(0,0,0,0.03) 20px), linear-gradient(to bottom, #fff, #f0f0f0)`),
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                    }}></div>
                 </div>
             </div>
         </div>
     );
 };
+
+// Helper for darkening colors for gradients
+function adjustColor(color: string, amount: number) {
+    return '#' + color.replace(/^#/, '').replace(/../g, color => ('0' + Math.min(255, Math.max(0, parseInt(color, 16) + amount)).toString(16)).substr(-2));
+}
 
 export default Envelope;

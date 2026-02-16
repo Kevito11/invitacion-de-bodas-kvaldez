@@ -1,9 +1,10 @@
 import React from 'react';
 import type { InvitationData } from '../../types';
 import InvitationPreview from '../InvitationPreview';
-
 import MobileMockup from '../UI/MobileMockup';
 import { Clock, Monitor, Smartphone } from 'lucide-react';
+// import { DRESS_CODES } from '../../data/dressCodes'; // Unused now
+import { useLanguage } from '../../context/LanguageContext';
 
 interface StepProps {
     data: InvitationData;
@@ -104,10 +105,7 @@ const AnalogClockPicker: React.FC<{ value: string; onChange: (val: string) => vo
                         <div style={{ position: 'absolute', top: '50%', left: '50%', width: '4px', height: '4px', background: '#333', borderRadius: '50%', transform: 'translate(-50%, -50%)' }}></div>
 
                         {numbers.map((num, i) => {
-                            const angle = (i * 30) - 90; // -90 to start at 12 o'clock (0 degrees is 3 o'clock usually)
-                            // Correction: index 0 is 12 (or 00), which is at -90deg? 
-                            // i=0 -> -90 (Top). Yes.
-
+                            const angle = (i * 30) - 90;
                             const radius = 80;
                             const x = radius * Math.cos(angle * Math.PI / 180);
                             const y = radius * Math.sin(angle * Math.PI / 180);
@@ -145,7 +143,16 @@ const AnalogClockPicker: React.FC<{ value: string; onChange: (val: string) => vo
 };
 
 const StepDetails: React.FC<StepProps> = ({ data, onChange }) => {
+    const { t } = useLanguage();
     const [viewMode, setViewMode] = React.useState<'mobile' | 'desktop'>('mobile');
+
+    const dressCodesTranslated = React.useMemo(() => [
+        { id: 'Formal', label: t('dresscode.formal.label'), description: t('dresscode.formal.desc') },
+        { id: 'SemiFormal', label: t('dresscode.semiformal.label'), description: t('dresscode.semiformal.desc') },
+        { id: 'CocktailCasual', label: t('dresscode.cocktail.label'), description: t('dresscode.cocktail.desc') },
+        { id: 'Rigurosa', label: t('dresscode.rigurosa.label'), description: t('dresscode.rigurosa.desc') },
+        { id: 'Playa', label: t('dresscode.playa.label'), description: t('dresscode.playa.desc') }
+    ], [t]);
 
     const inputStyle = {
         width: '100%',
@@ -176,7 +183,7 @@ const StepDetails: React.FC<StepProps> = ({ data, onChange }) => {
             {/* Left Column: Form (Scrollable) */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '2rem 3rem', backgroundColor: 'white', borderRight: '1px solid #E5E7EB' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                    <h2 style={{ fontSize: '1.8rem', fontWeight: 700, margin: 0, color: '#111827' }}>Detalles del Evento</h2>
+                    <h2 style={{ fontSize: '1.8rem', fontWeight: 700, margin: 0, color: '#111827' }}>{t('details.title')}</h2>
 
                     {/* View Mode Toggle */}
                     <div style={{ display: 'flex', backgroundColor: '#F3F4F6', borderRadius: '8px', padding: '3px' }}>
@@ -195,7 +202,7 @@ const StepDetails: React.FC<StepProps> = ({ data, onChange }) => {
                                 boxShadow: viewMode === 'desktop' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
                             }}
                         >
-                            <Monitor size={14} /> Desktop
+                            <Monitor size={14} /> {t('design.view.desktop')}
                         </button>
                         <button
                             onClick={() => setViewMode('mobile')}
@@ -212,37 +219,37 @@ const StepDetails: React.FC<StepProps> = ({ data, onChange }) => {
                                 boxShadow: viewMode === 'mobile' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
                             }}
                         >
-                            <Smartphone size={14} /> Mobile
+                            <Smartphone size={14} /> {t('design.view.mobile')}
                         </button>
                     </div>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
                     <div>
-                        <label style={labelStyle}>Novio/a 1</label>
+                        <label style={labelStyle}>{t('details.label.p1')}</label>
                         <input
                             type="text"
                             value={data.partner1}
                             onChange={(e) => onChange('partner1', e.target.value)}
                             style={inputStyle}
-                            placeholder="Nombre"
+                            placeholder={t('details.placeholder.name')}
                         />
                     </div>
                     <div>
-                        <label style={labelStyle}>Novio/a 2</label>
+                        <label style={labelStyle}>{t('details.label.p2')}</label>
                         <input
                             type="text"
                             value={data.partner2}
                             onChange={(e) => onChange('partner2', e.target.value)}
                             style={inputStyle}
-                            placeholder="Nombre"
+                            placeholder={t('details.placeholder.name')}
                         />
                     </div>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
                     <div>
-                        <label style={labelStyle}>Fecha</label>
+                        <label style={labelStyle}>{t('details.label.date')}</label>
                         <input
                             type="date"
                             value={data.date}
@@ -251,7 +258,7 @@ const StepDetails: React.FC<StepProps> = ({ data, onChange }) => {
                         />
                     </div>
                     <div>
-                        <label style={labelStyle}>Hora (Reloj)</label>
+                        <label style={labelStyle}>{t('details.label.time')}</label>
                         <AnalogClockPicker
                             value={data.time}
                             onChange={(val) => onChange('time', val)}
@@ -260,52 +267,59 @@ const StepDetails: React.FC<StepProps> = ({ data, onChange }) => {
                 </div>
 
                 <div style={groupStyle}>
-                    <label style={labelStyle}>Lugar del Evento</label>
+                    <label style={labelStyle}>{t('details.label.venue')}</label>
                     <input
                         type="text"
                         value={data.venueName}
                         onChange={(e) => onChange('venueName', e.target.value)}
                         style={{ ...inputStyle, marginBottom: '0.8rem' }}
-                        placeholder="Nombre del Salón / Iglesia"
+                        placeholder={t('details.placeholder.venue_name')}
                     />
                     <input
                         type="text"
                         value={data.venueAddress}
                         onChange={(e) => onChange('venueAddress', e.target.value)}
                         style={inputStyle}
-                        placeholder="Dirección completa"
+                        placeholder={t('details.placeholder.venue_address')}
                     />
                 </div>
 
                 <div style={groupStyle}>
-                    <label style={labelStyle}>Mensaje de Bienvenida</label>
+                    <label style={labelStyle}>{t('details.label.message')}</label>
                     <textarea
                         value={data.message}
                         onChange={(e) => onChange('message', e.target.value)}
                         rows={4}
                         style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }}
-                        placeholder="Escribe un mensaje bonito para tus invitados..."
+                        placeholder={t('details.placeholder.message')}
                     />
                 </div>
 
                 <div style={groupStyle}>
-                    <label style={labelStyle}>Código de Vestimenta</label>
+                    <label style={labelStyle}>{t('details.label.dresscode')}</label>
                     <select
                         value={data.dressCode}
-                        onChange={(e) => onChange('dressCode', e.target.value)}
+                        onChange={(e) => {
+                            const selectedCode = dressCodesTranslated.find(dc => dc.id === e.target.value);
+                            onChange('dressCode', e.target.value);
+                            // Optional: Auto-fill details if empty
+                            if (selectedCode && !data.dressCodeDetails) {
+                                onChange('dressCodeDetails', selectedCode.description);
+                            }
+                        }}
                         style={{ ...inputStyle, marginBottom: '0.8rem' }}
                     >
-                        <option value="Formal">Formal</option>
-                        <option value="Semiformal">Semiformal</option>
-                        <option value="Cocktail">Cocktail</option>
-                        <option value="Casual">Casual</option>
+                        <option value="">{t('details.option.select')}</option>
+                        {dressCodesTranslated.map(dc => (
+                            <option key={dc.id} value={dc.id}>{dc.label}</option>
+                        ))}
                     </select>
                     <textarea
                         value={data.dressCodeDetails}
                         onChange={(e) => onChange('dressCodeDetails', e.target.value)}
                         rows={2}
                         style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }}
-                        placeholder="Detalles adicionales (opcional)"
+                        placeholder={t('details.placeholder.dresscode_details')}
                     />
                 </div>
             </div>

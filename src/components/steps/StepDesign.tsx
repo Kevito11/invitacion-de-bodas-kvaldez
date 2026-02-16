@@ -1,15 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
-    Palette, Image, Plus,
+    Palette, Image,
     Type, Undo, Redo, HelpCircle,
     LayoutTemplate, Monitor, Smartphone, RotateCcw,
-    Mail, Star, Check, Sparkles
+    Mail, Star, Check, Sparkles, User, Sticker
 } from 'lucide-react';
 import type { InvitationData } from '../../types';
 import { DESIGN_PRESETS } from '../../data/presets';
+import { THEMES } from '../../data/themes';
 import InvitationPreview from '../InvitationPreview';
-import MobileMockup from '../UI/MobileMockup';
-
+import { useLanguage } from '../../context/LanguageContext';
 
 interface StepProps {
     data: InvitationData;
@@ -19,49 +19,55 @@ interface StepProps {
     onReset?: () => void;
 }
 
-const THEMES = [
-    { id: 'gold', name: 'Gold Luxury', color: '#D4AF37' },
-    { id: 'rose', name: 'Rose Romantic', color: '#E0BFB8' },
-    { id: 'sage', name: 'Sage Nature', color: '#9DC183' },
-    { id: 'blue', name: 'Royal Blue', color: '#4169E1' },
-    { id: 'lavender', name: 'Lavender Dream', color: '#E6E6FA' }
-];
-
-const FONTS = [
-    { id: 'greatvibes', name: 'Romántico (Great Vibes)', family: "'Great Vibes', cursive" },
-    { id: 'dancing', name: 'Amistoso (Dancing Script)', family: "'Dancing Script', cursive" },
-    { id: 'alexbrush', name: 'Elegante (Alex Brush)', family: "'Alex Brush', cursive" },
-    { id: 'parisienne', name: 'Clásico (Parisienne)', family: "'Parisienne', cursive" },
-    { id: 'allura', name: 'Fluido (Allura)', family: "'Allura', cursive" },
-    { id: 'pinyon', name: 'Regal (Pinyon Script)', family: "'Pinyon Script', cursive" },
-    { id: 'petitformal', name: 'Fino (Petit Formal)', family: "'Petit Formal Script', cursive" }
-];
-
-const ENVELOPE_TYPES = [
-    { id: 'classic', name: 'Clásico' },
-    { id: 'pointed', name: 'Puntiagudo' },
-    { id: 'square', name: 'Cuadrado' },
-    { id: 'rounded', name: 'Redondeado' },
-];
-
-const ENVELOPE_MATERIALS = [
-    { id: 'paper', name: 'Papel Mate' },
-    { id: 'linen', name: 'Lino (Textura)' },
-    { id: 'velvet', name: 'Terciopelo' },
-    { id: 'cardstock', name: 'Cartulina' },
-];
-
-const ENVELOPE_FINISHES = [
-    { id: 'matte', name: 'Mate' },
-    { id: 'glossy', name: 'Brillante' },
-    { id: 'metallic', name: 'Metálico' },
-];
-
 const StepDesign: React.FC<StepProps> = ({ data, onChange, onUndo, onRedo, onReset }) => {
+    const { t } = useLanguage();
     const [subTab, setSubTab] = useState<'card' | 'envelope'>('card');
-    const [activeToolPanel, setActiveToolPanel] = useState<'none' | 'text' | 'image' | 'theme' | 'layout' | 'env-type' | 'env-material' | 'env-color' | 'env-finish' | 'presets'>('none');
+    const [activeToolPanel, setActiveToolPanel] = useState<'none' | 'text' | 'image' | 'theme' | 'layout' | 'card-bg' | 'card-border' | 'card-text' | 'env-type' | 'env-style' | 'env-material' | 'env-color' | 'env-finish' | 'env-liner' | 'env-seal' | 'env-stamp' | 'presets'>('none');
     const [viewMode, setViewMode] = useState<'mobile' | 'desktop'>('mobile');
     const [showTutorial, setShowTutorial] = useState(false);
+
+    // Data Consts moved inside to use t()
+    const FONTS = useMemo(() => [
+        { id: 'greatvibes', name: 'Romántico (Great Vibes)', family: "'Great Vibes', cursive" },
+        { id: 'dancing', name: 'Amistoso (Dancing Script)', family: "'Dancing Script', cursive" },
+        { id: 'alexbrush', name: 'Elegante (Alex Brush)', family: "'Alex Brush', cursive" },
+        { id: 'parisienne', name: 'Clásico (Parisienne)', family: "'Parisienne', cursive" },
+        { id: 'allura', name: 'Fluido (Allura)', family: "'Allura', cursive" },
+        { id: 'pinyon', name: 'Regal (Pinyon Script)', family: "'Pinyon Script', cursive" },
+        { id: 'petitformal', name: 'Fino (Petit Formal)', family: "'Petit Formal Script', cursive" },
+        { id: 'playfair', name: 'Moderno (Playfair)', family: "'Playfair Display', serif" },
+        { id: 'montserrat', name: 'Limpio (Montserrat)', family: "'Montserrat', sans-serif" }
+    ], []);
+
+
+
+    const ENVELOPE_TYPES = useMemo(() => [
+        { id: 'classic', name: t('design.panel.envelope_style.3d') },
+        { id: 'pointed', name: t('design.option.pointed') },
+        { id: 'square', name: t('design.option.square') },
+        { id: 'rounded', name: t('design.option.rounded') },
+    ], [t]);
+
+    const ENVELOPE_MATERIALS = useMemo(() => [
+        { id: 'paper', name: t('design.tool.material') + ' ' + t('design.material.matte') },
+        { id: 'linen', name: t('design.material.linen') },
+        { id: 'velvet', name: t('design.material.velvet') },
+        { id: 'cardstock', name: t('design.material.cardstock') },
+    ], [t]);
+
+    const ENVELOPE_FINISHES = useMemo(() => [
+        { id: 'matte', name: t('design.finish.matte') },
+        { id: 'glossy', name: t('design.finish.glossy') },
+        { id: 'metallic', name: t('design.finish.metallic') },
+    ], [t]);
+
+    const LINER_PATTERNS = [
+        { id: 'none', name: t('design.pattern.none'), url: '' },
+        { id: 'marble', name: t('design.pattern.marble'), url: 'https://images.unsplash.com/photo-1576020799627-aeac74d58064?auto=format&fit=crop&w=300&q=80' },
+        { id: 'floral', name: t('design.pattern.floral'), url: 'https://images.unsplash.com/photo-1549887552-93f8efb4133f?auto=format&fit=crop&w=300&q=80' },
+        { id: 'geo', name: t('design.pattern.geo'), url: 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&w=300&q=80' },
+        { id: 'gold', name: t('design.pattern.gold'), url: 'https://images.unsplash.com/photo-1550684847-75bdda21cc95?auto=format&fit=crop&w=300&q=80' },
+    ];
 
     // Mock upload handler re-implemented for the new UI
     const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -89,6 +95,27 @@ const StepDesign: React.FC<StepProps> = ({ data, onChange, onUndo, onRedo, onRes
         onChange('envelope', { ...currentEnvelope, [key]: value, enabled: true });
     };
 
+    const ToolButton = ({ icon: Icon, label, onClick, active }: any) => (
+        <button
+            onClick={onClick}
+            style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.3rem',
+                border: 'none', background: 'none', cursor: 'pointer', outline: 'none',
+                color: active ? '#34D399' : '#6B7280', width: '100%'
+            }}
+        >
+            <div style={{
+                padding: '0.8rem', borderRadius: '12px',
+                backgroundColor: active ? '#ECFDF5' : '#F3F4F6',
+                color: active ? '#34D399' : '#4B5563',
+                transition: 'all 0.2s'
+            }}>
+                <Icon size={20} />
+            </div>
+            <span style={{ fontSize: '0.65rem', fontWeight: 600, textAlign: 'center' }}>{label}</span>
+        </button>
+    );
+
     return (
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column', animation: 'fadeIn 0.5s ease-in', position: 'relative' }}>
             {showTutorial && (
@@ -102,15 +129,15 @@ const StepDesign: React.FC<StepProps> = ({ data, onChange, onUndo, onRedo, onRes
                         maxWidth: '500px', width: '90%', boxShadow: '0 10px 25px rgba(0,0,0,0.2)'
                     }}>
                         <h3 style={{ marginTop: 0, color: '#059669', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <HelpCircle size={20} /> Guía Rápida de Diseño
+                            <HelpCircle size={20} /> {t('design.tutorial.title')}
                         </h3>
-                        <p style={{ color: '#666', lineHeight: '1.5' }}>Sigue estos pasos para crear tu invitación perfecta:</p>
+                        <p style={{ color: '#666', lineHeight: '1.5' }}>{t('design.tutorial.intro')}</p>
                         <ol style={{ paddingLeft: '1.2rem', color: '#444', lineHeight: '1.6' }}>
-                            <li><strong>Detalles Básicos:</strong> Usa la barra izquierda "Agregar texto" para editar nombres, fecha y lugar.</li>
-                            <li><strong>Imágenes:</strong> Sube fotos de la pareja desde "Agregar imagen" para la portada.</li>
-                            <li><strong>Estilo:</strong> Selecciona "Estilos" para probar diferentes paletas de colores y fuentes.</li>
-                            <li><strong>Sobre:</strong> Cambia a la pestaña "Editar sobre" para personalizar el empaque virtual.</li>
-                            <li><strong>Vista Previa:</strong> Alterna entre vista Módvil y Desktop en la barra superior para asegurar que se vea bien en todos los dispositivos.</li>
+                            <li>{t('design.tutorial.step1')}</li>
+                            <li>{t('design.tutorial.step2')}</li>
+                            <li>{t('design.tutorial.step3')}</li>
+                            <li>{t('design.tutorial.step4')}</li>
+                            <li>{t('design.tutorial.step5')}</li>
                         </ol>
                         <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'flex-end' }}>
                             <button
@@ -120,7 +147,7 @@ const StepDesign: React.FC<StepProps> = ({ data, onChange, onUndo, onRedo, onRes
                                     padding: '0.6rem 1.2rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 600
                                 }}
                             >
-                                Entendido
+                                {t('design.tutorial.ok')}
                             </button>
                         </div>
                     </div>
@@ -129,25 +156,24 @@ const StepDesign: React.FC<StepProps> = ({ data, onChange, onUndo, onRedo, onRes
 
             {/* Sub-Header: Card vs Envelope */}
             <div style={{ backgroundColor: 'white', borderBottom: '1px solid #E5E7EB', padding: '0.8rem 2rem', display: 'flex', gap: '2rem', alignItems: 'center' }}>
-
                 <button
                     onClick={() => { setSubTab('card'); setActiveToolPanel('none'); }}
                     style={{ background: 'none', border: 'none', fontWeight: 600, color: subTab === 'card' ? '#34D399' : '#4B5563', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: subTab === 'card' ? '2px solid #34D399' : 'none', paddingBottom: '2px' }}
                 >
-                    Editar tarjeta
+                    {t('design.tab.card')}
                 </button>
                 <button
                     onClick={() => { setSubTab('envelope'); setActiveToolPanel('none'); }}
                     style={{ background: 'none', border: 'none', fontWeight: 600, color: subTab === 'envelope' ? '#34D399' : '#4B5563', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: subTab === 'envelope' ? '2px solid #34D399' : 'none', paddingBottom: '2px' }}
                 >
-                    Editar sobre
+                    {t('design.tab.envelope')}
                 </button>
             </div>
 
             {/* Warning Banner */}
             <div style={{ backgroundColor: '#FEF3C7', color: '#92400E', padding: '0.8rem 2rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
                 <div style={{ backgroundColor: '#FBBF24', padding: '2px 6px', borderRadius: '4px', color: 'white', fontWeight: 'bold' }}>!</div>
-                Cualquier cambio que realice actualizará la tarjeta automáticamente para todos los destinatarios.
+                {t('design.warning')}
             </div>
 
             {/* Canvas Toolbar Controls */}
@@ -169,7 +195,7 @@ const StepDesign: React.FC<StepProps> = ({ data, onChange, onUndo, onRedo, onRes
                             boxShadow: viewMode === 'desktop' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
                         }}
                     >
-                        <Monitor size={14} /> Desktop
+                        <Monitor size={14} /> {t('design.view.desktop')}
                     </button>
                     <button
                         onClick={() => setViewMode('mobile')}
@@ -186,17 +212,15 @@ const StepDesign: React.FC<StepProps> = ({ data, onChange, onUndo, onRedo, onRes
                             boxShadow: viewMode === 'mobile' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
                         }}
                     >
-                        <Smartphone size={14} /> Mobile
+                        <Smartphone size={14} /> {t('design.view.mobile')}
                     </button>
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: '#4B5563' }}>
-                        Include a backside
-                        <div style={{ width: '40px', height: '20px', backgroundColor: '#34D399', borderRadius: '10px', position: 'relative', cursor: 'pointer' }}>
-                            <div style={{ width: '16px', height: '16px', backgroundColor: 'white', borderRadius: '50%', position: 'absolute', top: '2px', right: '2px' }}></div>
-                        </div>
-                    </div>
+                    <button onClick={onUndo} title="Deshacer" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280' }}><Undo size={18} /></button>
+                    <button onClick={onRedo} title="Rehacer" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280' }}><Redo size={18} /></button>
+                    <button onClick={() => setShowTutorial(true)} title="Ayuda" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280' }}><HelpCircle size={18} /></button>
+                    <button onClick={onReset} title="Reiniciar" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#EF4444' }}><RotateCcw size={18} /></button>
                 </div>
             </div>
 
@@ -204,21 +228,26 @@ const StepDesign: React.FC<StepProps> = ({ data, onChange, onUndo, onRedo, onRes
             <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
 
                 {/* Left Action Toolbar */}
-                <div style={{ width: '90px', backgroundColor: 'white', borderRight: '1px solid #E5E7EB', padding: '1rem 0.5rem', display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center' }}>
+                <div style={{ width: '90px', backgroundColor: 'white', borderRight: '1px solid #E5E7EB', padding: '1rem 0.5rem', display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center', overflowY: 'auto' }}>
                     {subTab === 'card' ? (
                         <>
-                            <ToolButton icon={Sparkles} label="Plantillas" onClick={() => setActiveToolPanel(activeToolPanel === 'presets' ? 'none' : 'presets')} active={activeToolPanel === 'presets'} />
-                            <ToolButton icon={LayoutTemplate} label="Estructura" onClick={() => setActiveToolPanel(activeToolPanel === 'layout' ? 'none' : 'layout')} active={activeToolPanel === 'layout'} />
-                            <ToolButton icon={Type} label="Agregar texto" onClick={() => setActiveToolPanel(activeToolPanel === 'text' ? 'none' : 'text')} active={activeToolPanel === 'text'} />
-                            <ToolButton icon={Image} label="Agregar imagen" onClick={() => setActiveToolPanel(activeToolPanel === 'image' ? 'none' : 'image')} active={activeToolPanel === 'image'} />
-                            <ToolButton icon={Palette} label="Estilos" onClick={() => setActiveToolPanel(activeToolPanel === 'theme' ? 'none' : 'theme')} active={activeToolPanel === 'theme'} />
+                            <ToolButton icon={Sparkles} label={t('design.tool.presets')} onClick={() => setActiveToolPanel(activeToolPanel === 'presets' ? 'none' : 'presets')} active={activeToolPanel === 'presets'} />
+                            <ToolButton icon={LayoutTemplate} label={t('design.tool.layout')} onClick={() => setActiveToolPanel(activeToolPanel === 'layout' ? 'none' : 'layout')} active={activeToolPanel === 'layout'} />
+                            <ToolButton icon={Type} label={t('design.tool.typography')} onClick={() => setActiveToolPanel(activeToolPanel === 'card-text' ? 'none' : 'card-text')} active={activeToolPanel === 'card-text'} />
+                            <ToolButton icon={Image} label={t('design.tool.image')} onClick={() => setActiveToolPanel(activeToolPanel === 'image' ? 'none' : 'image')} active={activeToolPanel === 'image'} />
+                            <ToolButton icon={Palette} label={t('design.tool.styles')} onClick={() => setActiveToolPanel(activeToolPanel === 'theme' ? 'none' : 'theme')} active={activeToolPanel === 'theme'} />
                         </>
                     ) : (
                         <>
-                            <ToolButton icon={Mail} label="Forma" onClick={() => setActiveToolPanel(activeToolPanel === 'env-type' ? 'none' : 'env-type')} active={activeToolPanel === 'env-type'} />
-                            <ToolButton icon={LayoutTemplate} label="Material" onClick={() => setActiveToolPanel(activeToolPanel === 'env-material' ? 'none' : 'env-material')} active={activeToolPanel === 'env-material'} />
-                            <ToolButton icon={Palette} label="Color" onClick={() => setActiveToolPanel(activeToolPanel === 'env-color' ? 'none' : 'env-color')} active={activeToolPanel === 'env-color'} />
-                            <ToolButton icon={Star} label="Acabado" onClick={() => setActiveToolPanel(activeToolPanel === 'env-finish' ? 'none' : 'env-finish')} active={activeToolPanel === 'env-finish'} />
+                            <ToolButton icon={Mail} label={t('design.tool.shape')} onClick={() => setActiveToolPanel(activeToolPanel === 'env-type' ? 'none' : 'env-type')} active={activeToolPanel === 'env-type'} />
+                            <ToolButton icon={Sparkles} label={t('design.tool.experience')} onClick={() => setActiveToolPanel(activeToolPanel === 'env-style' ? 'none' : 'env-style')} active={activeToolPanel === 'env-style'} />
+                            <ToolButton icon={LayoutTemplate} label={t('design.tool.material')} onClick={() => setActiveToolPanel(activeToolPanel === 'env-material' ? 'none' : 'env-material')} active={activeToolPanel === 'env-material'} />
+                            <ToolButton icon={Palette} label={t('design.tool.color')} onClick={() => setActiveToolPanel(activeToolPanel === 'env-color' ? 'none' : 'env-color')} active={activeToolPanel === 'env-color'} />
+                            <ToolButton icon={Image} label={t('design.tool.liner')} onClick={() => setActiveToolPanel(activeToolPanel === 'env-liner' ? 'none' : 'env-liner')} active={activeToolPanel === 'env-liner'} />
+                            <ToolButton icon={User} label={t('design.tool.seal')} onClick={() => setActiveToolPanel(activeToolPanel === 'env-seal' ? 'none' : 'env-seal')} active={activeToolPanel === 'env-seal'} />
+                            <ToolButton icon={Sticker} label={t('design.tool.stamp')} onClick={() => setActiveToolPanel(activeToolPanel === 'env-stamp' ? 'none' : 'env-stamp')} active={activeToolPanel === 'env-stamp'} />
+                            <ToolButton icon={Star} label={t('design.tool.finish')} onClick={() => setActiveToolPanel(activeToolPanel === 'env-finish' ? 'none' : 'env-finish')} active={activeToolPanel === 'env-finish'} />
+
                         </>
                     )}
                 </div>
@@ -228,15 +257,19 @@ const StepDesign: React.FC<StepProps> = ({ data, onChange, onUndo, onRedo, onRes
                     <div style={{ width: '300px', backgroundColor: 'white', borderRight: '1px solid #E5E7EB', overflowY: 'auto', padding: '1.5rem', boxShadow: '5px 0 15px rgba(0,0,0,0.05)', zIndex: 10 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                             <h3 style={{ margin: 0, fontSize: '1rem' }}>
-                                {activeToolPanel === 'text' && 'Tipografía'}
-                                {activeToolPanel === 'image' && 'Imágenes'}
-                                {activeToolPanel === 'presets' && 'Plantillas de Diseño'}
-                                {activeToolPanel === 'theme' && 'Temas'}
-                                {activeToolPanel === 'layout' && 'Estructura Visual'}
-                                {activeToolPanel === 'env-type' && 'Forma del Sobre'}
-                                {activeToolPanel === 'env-material' && 'Material y Textura'}
-                                {activeToolPanel === 'env-color' && 'Color del Sobre'}
-                                {activeToolPanel === 'env-finish' && 'Acabado Final'}
+                                {activeToolPanel === 'text' && t('design.tool.typography')}
+                                {activeToolPanel === 'image' && t('design.tool.image')}
+                                {activeToolPanel === 'presets' && t('design.panel.presets.title')}
+                                {activeToolPanel === 'theme' && t('design.tool.styles')}
+                                {activeToolPanel === 'layout' && t('design.tool.layout')}
+                                {activeToolPanel === 'env-type' && t('design.tool.shape')}
+                                {activeToolPanel === 'env-style' && t('design.tool.experience')}
+                                {activeToolPanel === 'env-material' && t('design.tool.material')}
+                                {activeToolPanel === 'env-color' && t('design.tool.color')}
+                                {activeToolPanel === 'env-liner' && t('design.tool.liner')}
+                                {activeToolPanel === 'env-seal' && t('design.tool.seal')}
+                                {activeToolPanel === 'env-stamp' && t('design.tool.stamp')}
+                                {activeToolPanel === 'env-finish' && t('design.tool.finish')}
                             </h3>
                             <button onClick={() => setActiveToolPanel('none')} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '1.2rem' }}>&times;</button>
                         </div>
@@ -244,7 +277,7 @@ const StepDesign: React.FC<StepProps> = ({ data, onChange, onUndo, onRedo, onRes
                         {/* PRESETS PANEL */}
                         {activeToolPanel === 'presets' && (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-                                <p style={{ fontSize: '0.85rem', color: '#666', marginTop: 0 }}>Elige un diseño base para comenzar.</p>
+                                <p style={{ fontSize: '0.85rem', color: '#666', marginTop: 0 }}>{t('design.panel.presets.desc')}</p>
                                 {DESIGN_PRESETS.map(preset => (
                                     <button
                                         key={preset.id}
@@ -274,6 +307,54 @@ const StepDesign: React.FC<StepProps> = ({ data, onChange, onUndo, onRedo, onRes
                         )}
 
                         {/* ENVELOPE TOOLS */}
+                        {activeToolPanel === 'env-style' && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                                <p style={{ fontSize: '0.85rem', color: '#666', marginTop: 0 }}>{t('design.panel.envelope_style.title')}</p>
+
+                                <button
+                                    onClick={() => updateEnvelope('openingStyle', 'envelope')}
+                                    style={{
+                                        display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem',
+                                        border: (!data.envelope?.openingStyle || data.envelope.openingStyle === 'envelope') ? '2px solid #34D399' : '1px solid #eee',
+                                        borderRadius: '8px', backgroundColor: 'white', cursor: 'pointer', textAlign: 'left'
+                                    }}
+                                >
+                                    <div style={{ fontSize: '1.5rem' }}>✉️</div>
+                                    <div>
+                                        <div style={{ fontWeight: 600, marginBottom: '0.2rem' }}>{t('design.panel.envelope_style.3d')}</div>
+                                    </div>
+                                </button>
+
+                                <button
+                                    onClick={() => updateEnvelope('openingStyle', 'book')}
+                                    style={{
+                                        display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem',
+                                        border: data.envelope?.openingStyle === 'book' ? '2px solid #34D399' : '1px solid #eee',
+                                        borderRadius: '8px', backgroundColor: 'white', cursor: 'pointer', textAlign: 'left'
+                                    }}
+                                >
+                                    <div style={{ fontSize: '1.5rem' }}>📖</div>
+                                    <div>
+                                        <div style={{ fontWeight: 600, marginBottom: '0.2rem' }}>{t('design.panel.envelope_style.book')}</div>
+                                    </div>
+                                </button>
+
+                                <button
+                                    onClick={() => updateEnvelope('openingStyle', 'crumple')}
+                                    style={{
+                                        display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem',
+                                        border: data.envelope?.openingStyle === 'crumple' ? '2px solid #34D399' : '1px solid #eee',
+                                        borderRadius: '8px', backgroundColor: 'white', cursor: 'pointer', textAlign: 'left'
+                                    }}
+                                >
+                                    <div style={{ fontSize: '1.5rem' }}>🍂</div>
+                                    <div>
+                                        <div style={{ fontWeight: 600, marginBottom: '0.2rem' }}>{t('design.panel.envelope_style.crumple')}</div>
+                                    </div>
+                                </button>
+                            </div>
+                        )}
+
                         {activeToolPanel === 'env-type' && (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                                 {ENVELOPE_TYPES.map(type => (
@@ -373,6 +454,349 @@ const StepDesign: React.FC<StepProps> = ({ data, onChange, onUndo, onRedo, onRes
                             </div>
                         )}
 
+                        {/* LINER TOOLS */}
+                        {activeToolPanel === 'env-liner' && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                <p style={{ fontSize: '0.85rem', color: '#666', marginTop: 0 }}>{t('design.panel.liner.title')}</p>
+
+                                <div>
+                                    <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '0.5rem' }}>{t('design.panel.liner.solid')}</label>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.5rem' }}>
+                                        {['#FFFFFF', '#000000', '#F5E6D3', '#E0BFB8', '#9DC183', '#B8C0FF', '#FFD700', '#C0C0C0', '#F4A460', '#FF69B4'].map(color => (
+                                            <button
+                                                key={color}
+                                                onClick={() => {
+                                                    const currentEnv = data.envelope || { enabled: true, type: 'classic', material: 'paper', color: '#f5f5f5' };
+                                                    onChange('envelope', {
+                                                        ...currentEnv,
+                                                        liner: { type: 'color', value: color }
+                                                    });
+                                                }}
+                                                style={{
+                                                    width: '100%', aspectRatio: '1/1', borderRadius: '4px',
+                                                    backgroundColor: color, border: '1px solid #ddd', cursor: 'pointer'
+                                                }}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '0.5rem' }}>{t('design.panel.liner.image')}</label>
+                                    <select
+                                        style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc' }}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            const currentEnv = data.envelope || { enabled: true, type: 'classic', material: 'paper', color: '#f5f5f5' };
+                                            if (val === 'none') {
+                                                onChange('envelope', { ...currentEnv, liner: undefined });
+                                            } else {
+                                                onChange('envelope', {
+                                                    ...currentEnv,
+                                                    liner: { type: 'image', value: val }
+                                                });
+                                            }
+                                        }}
+                                        value={data.envelope?.liner?.type === 'image' ? data.envelope.liner.value : 'none'}
+                                    >
+                                        <option value="none">Sin imagen</option>
+                                        {data.mediaLibrary?.map((url, i) => (
+                                            <option key={i} value={url}>Imagen de Biblioteca {i + 1}</option>
+                                        ))}
+                                    </select>
+                                    <p style={{ fontSize: '0.7rem', color: '#999', marginTop: '0.2rem' }}>Sube imágenes en la pestaña "Agregar imagen" primero.</p>
+                                </div>
+
+                                <div>
+                                    <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '0.5rem' }}>{t('design.panel.liner.pattern')}</label>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
+                                        {LINER_PATTERNS.map(pat => (
+                                            <button
+                                                key={pat.id}
+                                                onClick={() => {
+                                                    const currentEnv = data.envelope || { enabled: true, type: 'classic', material: 'paper', color: '#f5f5f5' };
+                                                    if (pat.id === 'none') {
+                                                        onChange('envelope', { ...currentEnv, liner: undefined });
+                                                    } else {
+                                                        onChange('envelope', { ...currentEnv, liner: { type: 'image', value: pat.url } });
+                                                    }
+                                                }}
+                                                style={{
+                                                    height: '60px', borderRadius: '4px', border: '1px solid #ddd', cursor: 'pointer',
+                                                    backgroundImage: pat.url ? `url(${pat.url})` : 'none', backgroundSize: 'cover',
+                                                    backgroundColor: '#f9f9f9', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                    fontSize: '0.7rem', color: '#666'
+                                                }}
+                                            >
+                                                {!pat.url && pat.name}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* SEAL TOOLS */}
+                        {activeToolPanel === 'env-seal' && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={data.envelope?.seal?.enabled !== false}
+                                        onChange={(e) => {
+                                            const currentEnv = data.envelope || { enabled: true, type: 'classic', material: 'paper', color: '#f5f5f5' };
+                                            onChange('envelope', {
+                                                ...currentEnv,
+                                                seal: { ...(currentEnv.seal || { color: '#D73838' }), enabled: e.target.checked }
+                                            });
+                                        }}
+                                    />
+                                    <span style={{ fontWeight: 600 }}>{t('design.panel.seal.enable')}</span>
+                                </label>
+
+                                {data.envelope?.seal?.enabled !== false && (
+                                    <>
+                                        <div>
+                                            <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '0.5rem' }}>{t('design.panel.seal.color')}</label>
+                                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                {['#D73838', '#8B0000', '#DAA520', '#C0C0C0', '#2F4F4F', '#000000'].map(c => (
+                                                    <button
+                                                        key={c}
+                                                        onClick={() => {
+                                                            const currentEnv = data.envelope || { enabled: true, type: 'classic', material: 'paper', color: '#f5f5f5' };
+                                                            onChange('envelope', {
+                                                                ...currentEnv,
+                                                                seal: { ...(currentEnv.seal || { enabled: true }), color: c }
+                                                            });
+                                                        }}
+                                                        style={{
+                                                            width: '30px', height: '30px', borderRadius: '50%',
+                                                            backgroundColor: c, border: 'none', cursor: 'pointer',
+                                                            boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                                                        }}
+                                                    />
+                                                ))}
+                                                <input
+                                                    type="color"
+                                                    value={data.envelope?.seal?.color || '#D73838'}
+                                                    onChange={(e) => {
+                                                        const currentEnv = data.envelope || { enabled: true, type: 'classic', material: 'paper', color: '#f5f5f5' };
+                                                        onChange('envelope', {
+                                                            ...currentEnv,
+                                                            seal: { ...(currentEnv.seal || { enabled: true }), color: e.target.value }
+                                                        });
+                                                    }}
+                                                    style={{ width: '30px', height: '30px', border: 'none', background: 'none' }}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '0.5rem' }}>{t('design.panel.seal.initials')}</label>
+                                            <input
+                                                type="text"
+                                                maxLength={2}
+                                                placeholder="Ej. AB"
+                                                value={data.envelope?.seal?.text || ''}
+                                                onChange={(e) => {
+                                                    const currentEnv = data.envelope || { enabled: true, type: 'classic', material: 'paper', color: '#f5f5f5' };
+                                                    onChange('envelope', {
+                                                        ...currentEnv,
+                                                        seal: { ...(currentEnv.seal || { enabled: true, color: '#D73838' }), text: e.target.value }
+                                                    });
+                                                }}
+                                                style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc', textTransform: 'uppercase' }}
+                                            />
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        )}
+
+                        {/* STAMP TOOLS */}
+                        {activeToolPanel === 'env-stamp' && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={data.envelope?.stamp?.enabled !== false}
+                                        onChange={(e) => {
+                                            const currentEnv = data.envelope || { enabled: true, type: 'classic', material: 'paper', color: '#f5f5f5' };
+                                            onChange('envelope', {
+                                                ...currentEnv,
+                                                stamp: { ...(currentEnv.stamp || {}), enabled: e.target.checked }
+                                            });
+                                        }}
+                                    />
+                                    <span style={{ fontWeight: 600 }}>Mostrar Estampilla</span>
+                                </label>
+
+                                {data.envelope?.stamp?.enabled !== false && (
+                                    <div>
+                                        <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '0.5rem' }}>Imagen de Estampilla</label>
+                                        <select
+                                            style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc' }}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                const currentEnv = data.envelope || { enabled: true, type: 'classic', material: 'paper', color: '#f5f5f5' };
+                                                onChange('envelope', {
+                                                    ...currentEnv,
+                                                    stamp: { enabled: true, url: val }
+                                                });
+                                            }}
+                                            value={data.envelope?.stamp?.url || ''}
+                                        >
+                                            <option value="">Predeterminada</option>
+                                            {data.mediaLibrary?.map((url, i) => (
+                                                <option key={i} value={url}>Imagen de Biblioteca {i + 1}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* CARD DESIGN PANEL: BACKGROUND */}
+                        {activeToolPanel === 'card-bg' && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                <div>
+                                    <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '0.5rem' }}>{t('design.tool.color')}</label>
+                                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                        {['#FFFFFF', '#FAF7F2', '#F5E6D3', '#000000', '#2C3E50'].map(c => (
+                                            <button
+                                                key={c}
+                                                onClick={() => onChange('design', { ...data.design, backgroundColor: c, backgroundImage: '' })}
+                                                style={{ width: '30px', height: '30px', borderRadius: '4px', backgroundColor: c, border: '1px solid #ddd', cursor: 'pointer' }}
+                                            />
+                                        ))}
+                                        <input
+                                            type="color"
+                                            value={data.design?.backgroundColor || '#FFFFFF'}
+                                            onChange={(e) => onChange('design', { ...data.design, backgroundColor: e.target.value, backgroundImage: '' })}
+                                            style={{ width: '30px', height: '30px', padding: 0, border: 'none', background: 'none' }}
+                                        />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '0.5rem' }}>Texturas</label>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
+                                        {[
+                                            { id: 'canvas', url: 'https://www.transparenttextures.com/patterns/canvas-orange.png' },
+                                            { id: 'paper', url: 'https://www.transparenttextures.com/patterns/cream-paper.png' },
+                                            { id: 'linen', url: 'https://www.transparenttextures.com/patterns/gray-floral.png' } // Placeholder for linen
+                                        ].map(tex => (
+                                            <button
+                                                key={tex.id}
+                                                onClick={() => onChange('design', { ...data.design, backgroundImage: tex.url })}
+                                                style={{
+                                                    height: '60px', borderRadius: '4px', border: '1px solid #ddd',
+                                                    backgroundImage: `url(${tex.url})`, backgroundColor: '#f5f5f5',
+                                                    cursor: 'pointer'
+                                                }}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '0.5rem' }}>Opacidad del Contenido</label>
+                                    <input
+                                        type="range" min="0" max="1" step="0.1"
+                                        value={data.design?.overlayOpacity ?? 0}
+                                        onChange={(e) => onChange('design', { ...data.design, overlayOpacity: parseFloat(e.target.value) })}
+                                        style={{ width: '100%' }}
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        {/* CARD DESIGN PANEL: BORDER */}
+                        {activeToolPanel === 'card-border' && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                <div>
+                                    <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '0.5rem' }}>Estilo de Borde</label>
+                                    <select
+                                        style={{ width: '100%', padding: '0.5rem' }}
+                                        value={data.design?.borderStyle || 'none'}
+                                        onChange={(e) => onChange('design', { ...data.design, borderStyle: e.target.value })}
+                                    >
+                                        <option value="none">Ninguno</option>
+                                        <option value="solid">Sólido Simple</option>
+                                        <option value="double">Doble Línea</option>
+                                        <option value="gold-frame">Marco Dorado</option>
+                                        <option value="floral">Floral (Esquinas)</option>
+                                    </select>
+                                </div>
+                                {data.design?.borderStyle !== 'none' && data.design?.borderStyle !== 'gold-frame' && (
+                                    <div>
+                                        <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '0.5rem' }}>Color del Borde</label>
+                                        <input
+                                            type="color"
+                                            value={data.design?.borderColor || '#000000'}
+                                            onChange={(e) => onChange('design', { ...data.design, borderColor: e.target.value })}
+                                            style={{ width: '100%', height: '40px', padding: 0, border: 'none' }}
+                                        />
+                                    </div>
+                                )}
+                                <div>
+                                    <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '0.5rem' }}>Esquinas</label>
+                                    <div style={{ display: 'flex', gap: '1rem' }}>
+                                        <button
+                                            onClick={() => onChange('design', { ...data.design, corners: 'square' })}
+                                            style={{ padding: '0.5rem 1rem', border: data.design?.corners === 'square' ? '2px solid blue' : '1px solid #ccc' }}
+                                        >Cuadradas</button>
+                                        <button
+                                            onClick={() => onChange('design', { ...data.design, corners: 'rounded' })}
+                                            style={{ padding: '0.5rem 1rem', border: data.design?.corners === 'rounded' ? '2px solid blue' : '1px solid #ccc' }}
+                                        >Redondeadas</button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* CARD DESIGN PANEL: TYPOGRAPHY */}
+                        {activeToolPanel === 'card-text' && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                <div>
+                                    <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '0.5rem' }}>Fuente Principal (Nombres)</label>
+                                    <select
+                                        style={{ width: '100%', padding: '0.5rem' }}
+                                        value={data.design?.font || data.font || 'greatvibes'}
+                                        onChange={(e) => {
+                                            onChange('font', e.target.value);
+                                            onChange('design', { ...data.design, font: e.target.value });
+                                        }}
+                                    >
+                                        {FONTS.map(f => (
+                                            <option key={f.id} value={f.id}>{f.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '0.5rem' }}>Color Principal</label>
+                                    <input
+                                        type="color"
+                                        value={data.design?.primaryColor || '#000000'}
+                                        onChange={(e) => onChange('design', { ...data.design, primaryColor: e.target.value })}
+                                        style={{ width: '100%', height: '40px', padding: 0, border: 'none' }}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '0.5rem' }}>Fuente de Cuerpo</label>
+                                    <select
+                                        style={{ width: '100%', padding: '0.5rem' }}
+                                        value={data.design?.bodyFont || 'montserrat'}
+                                        onChange={(e) => onChange('design', { ...data.design, bodyFont: e.target.value })}
+                                    >
+                                        <option value="montserrat">Montserrat</option>
+                                        <option value="lato">Lato</option>
+                                        <option value="playfair">Playfair Display</option>
+                                    </select>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Layout Tool Content */}
                         {activeToolPanel === 'layout' && (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -387,10 +811,10 @@ const StepDesign: React.FC<StepProps> = ({ data, onChange, onUndo, onRedo, onRes
                                         transition: 'all 0.2s'
                                     }}
                                 >
-                                    <div style={{ padding: '0.5rem', background: '#F0FDF4', borderRadius: '50%', color: '#34D399' }}><Monitor size={20} /></div>
+                                    <div style={{ fontSize: '1.5rem' }}>📱</div>
                                     <div>
-                                        <div style={{ fontWeight: 600, marginBottom: '0.2rem' }}>Scroll Vertical</div>
-                                        <div style={{ fontSize: '0.75rem', color: '#666' }}>Desliza hacia abajo. Moderno y fluido. (Recomendado)</div>
+                                        <div style={{ fontWeight: 600, marginBottom: '0.2rem' }}>Scroll Vertical (Moderno)</div>
+                                        <div style={{ fontSize: '0.75rem', color: '#666' }}>Ideal para móviles. Navegación fluida hacia abajo.</div>
                                     </div>
                                 </button>
 
@@ -403,10 +827,10 @@ const StepDesign: React.FC<StepProps> = ({ data, onChange, onUndo, onRedo, onRes
                                         transition: 'all 0.2s'
                                     }}
                                 >
-                                    <div style={{ padding: '0.5rem', background: '#F0FDF4', borderRadius: '50%', color: '#34D399' }}><Smartphone size={20} style={{ transform: 'rotate(90deg)' }} /></div>
+                                    <div style={{ fontSize: '1.5rem' }}>↔️</div>
                                     <div>
-                                        <div style={{ fontWeight: 600, marginBottom: '0.2rem' }}>Slider / Historias</div>
-                                        <div style={{ fontSize: '0.75rem', color: '#666' }}>Desliza hacia los lados. Ideal para móviles.</div>
+                                        <div style={{ fontWeight: 600, marginBottom: '0.2rem' }}>Deslizar (Slider)</div>
+                                        <div style={{ fontSize: '0.75rem', color: '#666' }}>Navegación horizontal o por pasos. (Pronto)</div>
                                     </div>
                                 </button>
 
@@ -419,329 +843,184 @@ const StepDesign: React.FC<StepProps> = ({ data, onChange, onUndo, onRedo, onRes
                                         transition: 'all 0.2s'
                                     }}
                                 >
-                                    <div style={{ padding: '0.5rem', background: '#F0FDF4', borderRadius: '50%', color: '#34D399' }}><LayoutTemplate size={20} /></div>
+                                    <div style={{ fontSize: '1.5rem' }}>📄</div>
                                     <div>
-                                        <div style={{ fontWeight: 600, marginBottom: '0.2rem' }}>Clásico (Tarjeta)</div>
-                                        <div style={{ fontSize: '0.75rem', color: '#666' }}>Formato continuo sin cortes. Elegante y tradicional.</div>
+                                        <div style={{ fontWeight: 600, marginBottom: '0.2rem' }}>Carta Simple (Clásico)</div>
+                                        <div style={{ fontSize: '0.75rem', color: '#666' }}>Estilo tradicional. Todo en una sola vista.</div>
                                     </div>
                                 </button>
                             </div>
                         )}
 
-                        {/* Theme Tool Content */}
+                        {/* IMAGE TOOLS */}
+                        {activeToolPanel === 'image' && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                <div>
+                                    <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '0.5rem' }}>Subir Nueva Imagen</label>
+                                    <div style={{
+                                        border: '2px dashed #ccc', borderRadius: '8px', padding: '2rem', textAlign: 'center',
+                                        cursor: 'pointer', backgroundColor: '#f9f9f9'
+                                    }} onClick={() => document.getElementById('imageUpload')?.click()}>
+                                        <p style={{ margin: 0, color: '#666' }}>Haz clic para seleccionar imágenes</p>
+                                        <input
+                                            id="imageUpload"
+                                            type="file"
+                                            multiple
+                                            accept="image/*"
+                                            onChange={handleUpload}
+                                            style={{ display: 'none' }}
+                                        />
+                                    </div>
+                                </div>
+
+                                {data.mediaLibrary && data.mediaLibrary.length > 0 && (
+                                    <div>
+                                        <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '0.5rem' }}>Tu Biblioteca de Medios</label>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
+                                            {data.mediaLibrary.map((url, i) => (
+                                                <div
+                                                    key={i}
+                                                    onClick={() => onChange('imageUrl', url)}
+                                                    style={{
+                                                        aspectRatio: '1/1',
+                                                        backgroundImage: `url(${url})`,
+                                                        backgroundSize: 'cover',
+                                                        borderRadius: '4px',
+                                                        cursor: 'pointer',
+                                                        border: data.imageUrl === url ? '2px solid #34D399' : '1px solid #ddd'
+                                                    }}
+                                                />
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* THEMES (STYLES) PANEL */}
                         {activeToolPanel === 'theme' && (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                <div style={{ padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '8px', border: '1px solid #eee' }}>
+                                    <p style={{ fontSize: '0.85rem', fontWeight: 600, color: '#444', marginBottom: '1rem', marginTop: 0 }}>Ajustes de Fondo</p>
+
+                                    <div style={{ marginBottom: '1rem' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                                            <label style={{ fontSize: '0.8rem', color: '#666' }}>Difuminar</label>
+                                            <span style={{ fontSize: '0.8rem', color: '#999' }}>{data.design?.blur || 0}px</span>
+                                        </div>
+                                        <input
+                                            type="range"
+                                            min="0"
+                                            max="10"
+                                            step="0.5"
+                                            value={data.design?.blur || 0}
+                                            onChange={(e) => onChange('design', { ...data.design, blur: parseFloat(e.target.value) })}
+                                            style={{ width: '100%', cursor: 'pointer', accentColor: '#34D399' }}
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                                            <label style={{ fontSize: '0.8rem', color: '#666' }}>Color / Saturación</label>
+                                            <span style={{ fontSize: '0.8rem', color: '#999' }}>{data.design?.saturation ?? 100}%</span>
+                                        </div>
+                                        <input
+                                            type="range"
+                                            min="0"
+                                            max="100"
+                                            step="5"
+                                            value={data.design?.saturation ?? 100}
+                                            onChange={(e) => onChange('design', { ...data.design, saturation: parseInt(e.target.value) })}
+                                            style={{ width: '100%', cursor: 'pointer', accentColor: '#34D399' }}
+                                        />
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.2rem' }}>
+                                            <span style={{ fontSize: '0.7rem', color: '#999' }}>B&N</span>
+                                            <span style={{ fontSize: '0.7rem', color: '#999' }}>Full Color</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <p style={{ fontSize: '0.85rem', color: '#666', marginTop: 0 }}>Paletas de colores y fuentes predefinidas.</p>
                                 {THEMES.map(theme => (
-                                    <button key={theme.id} onClick={() => onChange('theme', theme.id)} style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.5rem', border: data.theme === theme.id ? '1px solid black' : '1px solid #eee', borderRadius: '4px', backgroundColor: 'white', cursor: 'pointer' }}>
-                                        <div style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: theme.color }}></div>
-                                        <span>{theme.name}</span>
+                                    <button
+                                        key={theme.id}
+                                        onClick={() => {
+                                            onChange('theme', theme.id);
+                                            onChange('design', {
+                                                ...data.design,
+                                                backgroundColor: theme.bg,
+                                                backgroundImage: theme.backgroundImage && theme.backgroundImage !== '' ? theme.backgroundImage : undefined,
+                                                primaryColor: theme.color,
+                                                secondaryColor: theme.accent,
+                                                borderStyle: (theme.borderStyle as any) || 'none',
+                                                borderColor: theme.color, // Fallback border color
+                                                contentOverlay: theme.contentOverlay,
+                                                blur: theme.blur ?? 0,
+                                                saturation: theme.saturation ?? 100
+                                            });
+                                        }}
+                                        style={{
+                                            padding: '1rem',
+                                            border: data.theme === theme.id ? '2px solid #34D399' : '1px solid #eee',
+                                            borderRadius: '8px',
+                                            backgroundColor: 'white',
+                                            cursor: 'pointer',
+                                            textAlign: 'left',
+                                            transition: 'transform 0.2s',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '1rem'
+                                        }}
+                                    >
+                                        <div style={{
+                                            width: '40px', height: '40px', borderRadius: '50%',
+                                            backgroundColor: theme.bg, border: `2px solid ${theme.color}`,
+                                            flexShrink: 0
+                                        }}></div>
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ fontWeight: 'bold', color: '#333' }}>{theme.name}</div>
+                                            <div style={{ fontSize: '0.75rem', color: '#666' }}>Estilo {theme.id}</div>
+                                        </div>
                                     </button>
                                 ))}
                             </div>
                         )}
 
-                        {/* Text Tool Content */}
-                        {activeToolPanel === 'text' && (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
-                                {/* Event Details Inputs */}
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-                                    <h4 style={{ margin: '0 0 0.5rem', color: '#444', fontSize: '0.9rem' }}>Detalles del Evento</h4>
-
-                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                        <div style={{ flex: 1 }}>
-                                            <label style={{ fontSize: '0.75rem', color: '#666', display: 'block', marginBottom: '0.3rem' }}>Nombre 1</label>
-                                            <input
-                                                type="text"
-                                                value={data.partner1}
-                                                onChange={(e) => onChange('partner1', e.target.value)}
-                                                style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
-                                            />
-                                        </div>
-                                        <div style={{ flex: 1 }}>
-                                            <label style={{ fontSize: '0.75rem', color: '#666', display: 'block', marginBottom: '0.3rem' }}>Nombre 2</label>
-                                            <input
-                                                type="text"
-                                                value={data.partner2}
-                                                onChange={(e) => onChange('partner2', e.target.value)}
-                                                style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                        <div style={{ flex: 1 }}>
-                                            <label style={{ fontSize: '0.75rem', color: '#666', display: 'block', marginBottom: '0.3rem' }}>Fecha</label>
-                                            <input
-                                                type="date"
-                                                value={data.date}
-                                                onChange={(e) => onChange('date', e.target.value)}
-                                                style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
-                                            />
-                                        </div>
-                                        <div style={{ flex: 1 }}>
-                                            <label style={{ fontSize: '0.75rem', color: '#666', display: 'block', marginBottom: '0.3rem' }}>Hora</label>
-                                            <input
-                                                type="time"
-                                                value={data.time}
-                                                onChange={(e) => onChange('time', e.target.value)}
-                                                style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <label style={{ fontSize: '0.75rem', color: '#666', display: 'block', marginBottom: '0.3rem' }}>Lugar</label>
-                                        <input
-                                            type="text"
-                                            value={data.venueName}
-                                            onChange={(e) => onChange('venueName', e.target.value)}
-                                            placeholder="Nombre del lugar"
-                                            style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', marginBottom: '0.5rem' }}
-                                        />
-                                        <input
-                                            type="text"
-                                            value={data.venueAddress}
-                                            onChange={(e) => onChange('venueAddress', e.target.value)}
-                                            placeholder="Dirección"
-                                            style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label style={{ fontSize: '0.75rem', color: '#666', display: 'block', marginBottom: '0.3rem' }}>Mensaje</label>
-                                        <textarea
-                                            value={data.message}
-                                            onChange={(e) => onChange('message', e.target.value)}
-                                            rows={3}
-                                            style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', resize: 'vertical', fontFamily: 'inherit' }}
-                                        />
-                                    </div>
-                                </div>
-
-                                <div style={{ height: '1px', backgroundColor: '#eee' }}></div>
-
-                                {/* Font Selection */}
-                                <div>
-                                    <h4 style={{ margin: '0 0 0.5rem', color: '#444', fontSize: '0.9rem' }}>Tipografía</h4>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                        {FONTS.map(font => (
-                                            <button key={font.id} onClick={() => onChange('font', font.id)} style={{ padding: '0.8rem', border: data.font === font.id ? '1px solid black' : '1px solid #eee', borderRadius: '4px', backgroundColor: 'white', cursor: 'pointer', fontFamily: font.family, fontSize: '1.1rem', textAlign: 'left' }}>
-                                                {font.name}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Image Tool Content */}
-                        {activeToolPanel === 'image' && (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                                {/* Upload Button */}
-                                <div>
-                                    <label style={{ display: 'block', padding: '1rem', border: '2px dashed #ccc', borderRadius: '8px', textAlign: 'center', cursor: 'pointer', backgroundColor: '#fafafa', color: '#666' }}>
-                                        <Plus size={24} style={{ display: 'block', margin: '0 auto 0.5rem', color: '#34D399' }} />
-                                        <span style={{ fontWeight: 500 }}>Subir Nueva Imagen</span>
-                                        <input type="file" onChange={handleUpload} style={{ display: 'none' }} />
-                                    </label>
-                                </div>
-
-                                {/* Library Selection */}
-                                <div>
-                                    <h4 style={{ fontSize: '0.9rem', margin: '0 0 0.5rem 0', color: '#444' }}>Biblioteca de Medios</h4>
-                                    {(!data.mediaLibrary || data.mediaLibrary.length === 0) ? (
-                                        <p style={{ fontSize: '0.8rem', color: '#999', fontStyle: 'italic' }}>No hay imágenes subidas aún.</p>
-                                    ) : (
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', maxHeight: '150px', overflowY: 'auto' }}>
-                                            {data.mediaLibrary.map((img, idx) => (
-                                                <div
-                                                    key={idx}
-                                                    draggable
-                                                    onDragStart={(e) => e.dataTransfer.setData('text/plain', img)}
-                                                    style={{
-                                                        aspectRatio: '1/1',
-                                                        backgroundImage: `url(${img})`,
-                                                        backgroundSize: 'cover',
-                                                        backgroundPosition: 'center',
-                                                        borderRadius: '4px',
-                                                        cursor: 'grab',
-                                                        border: '1px solid #eee'
-                                                    }}
-                                                    title="Arraustra para usar"
-                                                    onClick={() => {
-                                                        // Fallback for click: Set as cover by default or ask user?
-                                                        // For simplicity: If user clicks, set as Cover. Drag needed for specific slots?
-                                                        // Better: Just show it's available.
-                                                        if (confirm('¿Usar como foto de portada?')) {
-                                                            onChange('imageUrl', img);
-                                                        }
-                                                    }}
-                                                />
-                                            ))}
-                                        </div>
-                                    )}
-                                    <p style={{ fontSize: '0.7rem', color: '#666', marginTop: '0.3rem' }}>* Haz clic para portada o asigna abajo.</p>
-                                </div>
-
-                                <div style={{ height: '1px', backgroundColor: '#eee' }}></div>
-
-                                {/* Assignments */}
-                                <div>
-                                    <h4 style={{ fontSize: '0.9rem', margin: '0 0 0.8rem 0', color: '#444' }}>Asignación de Imágenes</h4>
-
-                                    {/* 1. Cover Photo */}
-                                    <div style={{ marginBottom: '1rem' }}>
-                                        <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '0.3rem' }}>Foto de Portada</label>
-                                        <div style={{
-                                            border: '1px solid #ddd', borderRadius: '8px', overflow: 'hidden', height: '100px',
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            backgroundColor: '#f9f9f9', position: 'relative'
-                                        }}>
-                                            {data.imageUrl ? (
-                                                <div style={{ width: '100%', height: '100%', background: `url(${data.imageUrl}) center/contain no-repeat` }}>
-                                                    <button
-                                                        onClick={(e) => { e.stopPropagation(); onChange('imageUrl', ''); }}
-                                                        style={{ position: 'absolute', top: 5, right: 5, background: 'rgba(0,0,0,0.5)', color: 'white', borderRadius: '50%', width: 24, height: 24, border: 'none', cursor: 'pointer' }}
-                                                    >
-                                                        &times;
-                                                    </button>
-                                                </div>
-                                            ) : (
-                                                <span style={{ fontSize: '0.7rem', color: '#999' }}>Sin portada</span>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* 2. Backgrounds based on Layout */}
-                                    {data.layout === 'classic' ? (
-                                        // Classic Layout: Single Background
-                                        <div>
-                                            <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '0.3rem' }}>Fondo de Carta (Textura)</label>
-                                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                                                <div style={{
-                                                    flex: 1, height: '60px', borderRadius: '8px', border: '1px solid #ddd',
-                                                    background: data.backgroundImageUrl ? `url(${data.backgroundImageUrl}) center/cover` : '#FAF7F2',
-                                                    position: 'relative'
-                                                }}>
-                                                    {data.backgroundImageUrl && (
-                                                        <button
-                                                            onClick={() => onChange('backgroundImageUrl', '')}
-                                                            style={{ position: 'absolute', top: -5, right: -5, background: 'red', color: 'white', borderRadius: '50%', width: 20, height: 20, border: 'none', cursor: 'pointer', fontSize: '10px' }}
-                                                        >
-                                                            X
-                                                        </button>
-                                                    )}
-                                                </div>
-                                                <select
-                                                    style={{ flex: 2, padding: '0.5rem', borderRadius: '4px', border: '1px solid #ddd' }}
-                                                    onChange={(e) => {
-                                                        if (e.target.value === 'upload') {
-                                                            alert('Sube una imagen a la biblioteca y selecciónala.');
-                                                        } else {
-                                                            onChange('backgroundImageUrl', e.target.value);
-                                                        }
-                                                    }}
-                                                    value={data.backgroundImageUrl || ''}
-                                                >
-                                                    <option value="">Original (Papel)</option>
-                                                    {data.mediaLibrary?.map((url, i) => (
-                                                        <option key={i} value={url}>Imagen {i + 1}</option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        // Scroll/Slider Layout: 4 Sections
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-                                            <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block' }}>Fondos por Sección</label>
-                                            {['Portada', 'Detalles', 'Vestimenta', 'Galería'].map((label, idx) => (
-                                                <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                    <div style={{ width: '20px', fontSize: '0.7rem', color: '#999' }}>{idx + 1}</div>
-                                                    <div style={{
-                                                        width: '40px', height: '40px', borderRadius: '4px', border: '1px solid #eee',
-                                                        background: (data.backgroundImages && data.backgroundImages[idx]) ? `url(${data.backgroundImages[idx]}) center/cover` : '#f0f0f0'
-                                                    }}></div>
-                                                    <div style={{ flex: 1 }}>
-                                                        <div style={{ fontSize: '0.75rem', fontWeight: 600 }}>{label}</div>
-                                                        <select
-                                                            style={{ width: '100%', fontSize: '0.7rem', padding: '0.2rem', marginTop: '0.1rem', border: '1px solid #ddd', borderRadius: '4px' }}
-                                                            value={(data.backgroundImages && data.backgroundImages[idx]) || ''}
-                                                            onChange={(e) => {
-                                                                const newBgs = [...(data.backgroundImages || [])];
-                                                                while (newBgs.length <= idx) newBgs.push('');
-                                                                newBgs[idx] = e.target.value;
-                                                                onChange('backgroundImages', newBgs);
-                                                            }}
-                                                        >
-                                                            <option value="">Por defecto</option>
-                                                            {data.mediaLibrary?.map((url, i) => (
-                                                                <option key={i} value={url}>Img {i + 1}</option>
-                                                            ))}
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        )}
                     </div>
                 )}
 
-                {/* Canvas Area */}
-                <div style={{ flex: 1, backgroundColor: '#E5E5E5', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden', padding: viewMode === 'mobile' ? '2rem' : '0' }}>
-
-                    {/* The Card Container - Dynamic Size */}
-                    {viewMode === 'mobile' ? (
-                        <MobileMockup scale={0.85}>
-                            <InvitationPreview data={data} forceShowEnvelope={subTab === 'envelope'} isMobilePreview={true} />
-                        </MobileMockup>
-                    ) : (
-                        <div style={{
-                            width: '100%',
-                            height: '100%',
-                            backgroundColor: 'white',
-                            boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
-                            overflow: 'hidden', // Preview component handles scrolling
-                            borderRadius: '0'
-                        }}>
-                            <InvitationPreview data={data} forceShowEnvelope={subTab === 'envelope'} />
-                        </div>
-                    )}
-
-                </div>
-
-                {/* Right Actions Toolbar */}
-                <div style={{ width: '80px', backgroundColor: 'white', borderLeft: '1px solid #E5E7EB', padding: '1rem 0.5rem', display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center' }}>
-                    <ToolButton icon={RotateCcw} label="Reiniciar" onClick={onReset} />
-                    <ToolButton icon={Undo} label="Deshacer" onClick={onUndo} />
-                    <ToolButton icon={Redo} label="Rehacer" onClick={onRedo} />
-                    <div style={{ marginTop: 'auto' }}>
-                        <ToolButton icon={HelpCircle} label="Asesoría" onClick={() => setShowTutorial(true)} highlight />
+                {/* Main Canvas */}
+                <div style={{ flex: 1, backgroundColor: '#E5E7EB', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden', padding: '2rem' }}>
+                    <div style={{
+                        width: viewMode === 'mobile' ? '375px' : '100%',
+                        height: viewMode === 'mobile' ? '667px' : '100%',
+                        maxWidth: viewMode === 'desktop' ? '1200px' : '375px',
+                        backgroundColor: 'white',
+                        boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
+                        transition: 'all 0.3s ease',
+                        overflow: 'hidden',
+                        borderRadius: viewMode === 'mobile' ? '40px' : '8px',
+                        border: viewMode === 'mobile' ? '8px solid #333' : 'none'
+                    }}>
+                        {subTab === 'card' ? (
+                            <InvitationPreview data={data} isGuest={false} />
+                        ) : (
+                            // Render Envelope Preview 
+                            <InvitationPreview
+                                data={data}
+                                isGuest={false}
+                                forceShowEnvelope={true}
+                                isMobilePreview={viewMode === 'mobile'}
+                            />
+                        )}
                     </div>
                 </div>
 
+
             </div>
-        </div>
+
+        </div >
     );
 };
-
-// Helper Component for Buttons
-const ToolButton = ({ icon: Icon, label, onClick, active = false, highlight = false }: any) => (
-    <button
-        onClick={onClick}
-        style={{
-            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px',
-            background: highlight ? '#3B82F6' : (active ? '#F3F4F6' : 'transparent'),
-            border: 'none',
-            color: highlight ? 'white' : (active ? '#34D399' : '#6B7280'),
-            cursor: 'pointer', width: '100%', padding: '0.5rem', borderRadius: '4px'
-        }}
-    >
-        <Icon size={20} />
-        <span style={{ fontSize: '0.65rem', textAlign: 'center', lineHeight: '1.2' }}>{label}</span>
-    </button>
-);
 
 export default StepDesign;

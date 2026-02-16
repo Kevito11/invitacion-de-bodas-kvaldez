@@ -4,6 +4,7 @@ import InvitationPreview from './InvitationPreview';
 import Envelope from './UI/Envelope';
 import AudioPlayer from './UI/AudioPlayer';
 import LZString from 'lz-string';
+import { updateGuestStatus } from '../services/database';
 
 const GuestInvitation: React.FC = () => {
     const [searchParams] = useSearchParams();
@@ -128,6 +129,22 @@ const GuestInvitation: React.FC = () => {
         }
     }, [data, searchParams]);
 
+    const handleRSVP = async (status: 'confirmed' | 'declined', message?: string) => {
+        if (!data || !currentGuest) return;
+        // Optimization: Update local state immediately
+        const updatedGuest = { ...currentGuest, status, message };
+        setCurrentGuest(updatedGuest);
+        setData((prev: any) => ({
+            ...prev,
+            guests: prev.guests.map((g: any) => g.id === updatedGuest.id ? updatedGuest : g)
+        }));
+
+        // Update DB
+        if (data.id) { // Only if we assume 'id' is present in top-level data, which it is for DB loaded invitations
+            await updateGuestStatus(data.id, currentGuest.id, status, message);
+        }
+    };
+
     if (!data) return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Cargando...</div>;
 
     return (
@@ -155,6 +172,7 @@ const GuestInvitation: React.FC = () => {
                     data={data}
                     isGuest={true}
                     guest={currentGuest}
+                    onRSVP={handleRSVP}
                 />
             </div>
         </div>

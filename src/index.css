@@ -94,15 +94,36 @@ body {
 /* Scroll Reveal Animations */
 .reveal-on-scroll {
   opacity: 0;
-  transform: translateY(30px) scale(0.95);
-  /* Start slightly smaller and lower */
+  transform: translateY(30px);
   transition: all 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
   will-change: opacity, transform;
 }
 
 .reveal-on-scroll.is-visible {
   opacity: 1;
-  transform: translateY(0) scale(1);
+  transform: translateY(0);
+}
+
+.reveal-slide {
+  opacity: 0;
+  transform: translateX(-50px);
+  transition: all 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.reveal-slide.is-visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.reveal-zoom {
+  opacity: 0;
+  transform: scale(0.8);
+  transition: all 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.reveal-zoom.is-visible {
+  opacity: 1;
+  transform: scale(1);
 }
 
 /* Scroll Snap */

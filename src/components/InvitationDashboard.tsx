@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useEvents } from '../context/EventsContext';
+import { useLanguage } from '../context/LanguageContext';
 import type { InvitationData } from '../types';
 import InvitationPreview from './InvitationPreview';
 
@@ -16,20 +18,22 @@ import {
     Users,
     Send,
     Eye,
-    Check
+    Check,
+    ArrowLeft
 } from 'lucide-react';
-import { useEvents } from '../context/EventsContext';
 import { useParams } from 'react-router-dom';
-
-
 
 const InvitationDashboard: React.FC = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
     const { id } = useParams<{ id: string }>();
+    const { t } = useLanguage();
     const [currentStep, setCurrentStep] = useState(0);
     const [isSaved, setIsSaved] = useState(true);
-    const { fetchEvents } = useEvents();
+    const [showTagMenu, setShowTagMenu] = useState(false);
+    const [showCapacityMenu, setShowCapacityMenu] = useState(false);
+    const [selectedTag, setSelectedTag] = useState<string | null>(null);
+    const { fetchEvents, events, updateEvent } = useEvents();
 
     const [data, setData] = useState<InvitationData>({
         partner1: 'María',
@@ -50,8 +54,35 @@ const InvitationDashboard: React.FC = () => {
         dressCodeInspirationUrl: '',
         mapUrl: '',
         guests: [],
-        mediaLibrary: []
+        mediaLibrary: [],
+        selectedTag: '' // Initialize
     });
+
+    // Helper to get unique tags from all events for the dropdown
+    const uniqueSystemTags = useMemo(() => {
+        const tags = new Set<string>();
+        // Default tags
+        tags.add('Boda');
+        tags.add('Cumpleaños');
+        tags.add('Baby Shower');
+        tags.add('Corporativo');
+
+        // Add tags from existing events
+        events.forEach(ev => {
+            if (ev.selectedTag) tags.add(ev.selectedTag);
+            if (ev.customTags && Array.isArray(ev.customTags)) {
+                ev.customTags.forEach(t => tags.add(t));
+            }
+        });
+
+        // Add current local tags
+        if (data.customTags && Array.isArray(data.customTags)) {
+            data.customTags.forEach(t => tags.add(t));
+        }
+
+        return Array.from(tags).sort();
+    }, [events, data.customTags]);
+
 
     // Load Data
     useEffect(() => {
@@ -59,8 +90,8 @@ const InvitationDashboard: React.FC = () => {
             const allEventsRaw = localStorage.getItem(`events_${user.username}`);
             let allEvents = allEventsRaw ? JSON.parse(allEventsRaw) : [];
 
-            // Migration check: If no events array but old single key exists
             if (allEvents.length === 0) {
+                // ... (keep existing legacy loading)
                 const oldData = localStorage.getItem(`invitation_${user.username}`);
                 if (oldData) {
                     try {
@@ -68,19 +99,22 @@ const InvitationDashboard: React.FC = () => {
                         parsedOld.id = 'legacy-event-1';
                         allEvents = [parsedOld];
                         localStorage.setItem(`events_${user.username}`, JSON.stringify(allEvents));
-                        fetchEvents(); // Sync context after migration
+                        fetchEvents();
                     } catch (e) { console.error(e); }
                 }
             }
 
             if (id) {
-                // Edit Mode: Find event
                 const found = allEvents.find((e: any) => e.id === id);
                 if (found) {
-                    setData(prev => ({ ...prev, ...found }));
+                    setData(prev => {
+                        const newData = { ...prev, ...found };
+                        // Sync local state if data has tag
+                        if (newData.selectedTag) setSelectedTag(newData.selectedTag);
+                        return newData;
+                    });
                 }
             } else {
-                // Create Mode: New ID
                 const newId = crypto.randomUUID();
                 setData(prev => ({ ...prev, id: newId }));
             }
@@ -102,7 +136,7 @@ const InvitationDashboard: React.FC = () => {
             }
 
             localStorage.setItem(`events_${user.username}`, JSON.stringify(allEvents));
-            fetchEvents(); // Update global state
+            fetchEvents();
             setIsSaved(true);
         }
     };
@@ -120,36 +154,29 @@ const InvitationDashboard: React.FC = () => {
         setIsSaved(false);
     };
 
-    const brandColor = '#34D399'; // Matching the green from EventDetails
+    const brandColor = '#34D399';
 
-    // Update steps to match the new design tabs
     const DESIGN_STEPS = [
-        { id: 'design', label: 'DISEÑO', icon: Layout, component: StepDesign },
-        { id: 'details', label: 'DETALLES', icon: Type, component: StepDetails },
-        { id: 'preview', label: 'PREVISUALIZACIÓN', icon: Eye, component: InvitationPreview }, // Wrapping Preview as a step
-        { id: 'delivery', label: 'ENTREGA', icon: Send, component: StepGuests }, // Mapping Guests to Delivery for now
-        { id: 'tracking', label: 'SEGUIMIENTO', icon: Users, component: StepSend }, // Mapping Send to Tracking (placeholder)
+        { id: 'design', label: t('editor.step.design'), icon: Layout, component: StepDesign },
+        { id: 'details', label: t('editor.step.details'), icon: Type, component: StepDetails },
+        { id: 'preview', label: t('editor.step.preview'), icon: Eye, component: InvitationPreview },
+        { id: 'delivery', label: t('editor.step.delivery'), icon: Send, component: StepGuests },
+        { id: 'tracking', label: t('editor.step.tracking'), icon: Users, component: StepSend },
     ];
 
-    // History Management
     const [history, setHistory] = useState<InvitationData[]>([data]);
     const [historyIndex, setHistoryIndex] = useState(0);
 
-    // Debounce history updates to avoid one-char states
     useEffect(() => {
         const timer = setTimeout(() => {
-            // If data is different from current history head, push it
-            // We need to compare carefully or just trust the editing flow
             if (JSON.stringify(history[historyIndex]) !== JSON.stringify(data)) {
                 const newHistory = history.slice(0, historyIndex + 1);
                 newHistory.push(data);
-                // Limit history size if needed, e.g., 50 steps
                 if (newHistory.length > 50) newHistory.shift();
-
                 setHistory(newHistory);
                 setHistoryIndex(newHistory.length - 1);
             }
-        }, 500); // 500ms debounce for history
+        }, 500);
         return () => clearTimeout(timer);
     }, [data, history, historyIndex]);
 
@@ -174,7 +201,7 @@ const InvitationDashboard: React.FC = () => {
     const reset = () => {
         if (window.confirm("¿Seguro que quieres reiniciar? Se borrarán todos los campos.")) {
             const initialData: InvitationData = {
-                id: data.id, // Keep ID
+                id: data.id,
                 partner1: '',
                 partner2: '',
                 date: '',
@@ -196,7 +223,6 @@ const InvitationDashboard: React.FC = () => {
                 mediaLibrary: []
             };
             setData(initialData);
-            // Will be added to history by effect
         }
     };
 
@@ -206,20 +232,161 @@ const InvitationDashboard: React.FC = () => {
         <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#F9FAFB', overflow: 'hidden', fontFamily: "'Montserrat', sans-serif" }}>
 
             {/* Top Bar (Greenvelope Style) */}
-            <div style={{ height: '60px', backgroundColor: 'white', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 2rem' }}>
+            <div style={{ height: '60px', backgroundColor: 'white', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 2rem', position: 'relative', zIndex: 100 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <button
+                        onClick={() => {
+                            saveData(); // Ensure changes are saved before exiting
+                            navigate(`/dashboard/event/${data.id}`);
+                        }}
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: '0.4rem',
+                            background: 'none', border: 'none', cursor: 'pointer',
+                            color: '#4B5563', padding: '0.5rem', borderRadius: '50%',
+                            transition: 'background-color 0.2s',
+                        }}
+                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#F3F4F6'}
+                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                        title={t('editor.back_dashboard')}
+                    >
+                        <ArrowLeft size={24} />
+                    </button>
                     <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: '1.2rem', color: brandColor, margin: 0 }}>
                         Boda de {data.partner1} & {data.partner2}
                     </h1>
-                    <span style={{ fontSize: '0.75rem', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Invitación</span>
-                    <span style={{ fontSize: '0.75rem', color: '#6B7280', cursor: 'pointer' }}>+ Etiqueta</span>
-                    <div style={{ border: '1px solid #E5E7EB', borderRadius: '4px', padding: '0.1rem 0.5rem', fontSize: '0.75rem', color: '#6B7280', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                        140 personas <span style={{ color: brandColor }}>+</span>
+                    <span style={{ fontSize: '0.75rem', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{t('editor.invitation_label')}</span>
+
+                    {/* Tag Dropdown */}
+                    <div style={{ position: 'relative' }}>
+                        <button
+                            onClick={() => { setShowTagMenu(!showTagMenu); setShowCapacityMenu(false); }}
+                            style={{ background: 'none', border: 'none', fontSize: '0.75rem', color: selectedTag ? brandColor : '#6B7280', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.2rem', fontWeight: selectedTag ? 600 : 400 }}
+                            title={t('event.manage_tags')}
+                        >
+                            {selectedTag ? `${t('event.tag')}: ${selectedTag}` : t('event.new_tag')}
+                        </button>
+                        {showTagMenu && (
+                            <div style={{
+                                position: 'absolute', top: '100%', left: 0, marginTop: '0.5rem',
+                                backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                                border: '1px solid #E5E7EB', padding: '0.5rem', width: '220px', zIndex: 50
+                            }}>
+                                <div style={{ fontSize: '0.75rem', color: '#9CA3AF', marginBottom: '0.5rem', paddingBottom: '0.5rem', borderBottom: '1px solid #F3F4F6' }}>{t('event.create_tag_label')}</div>
+                                <div style={{ display: 'flex', gap: '0.3rem', marginBottom: '0.5rem' }}>
+                                    <input
+                                        type="text"
+                                        placeholder="Ej: VIP"
+                                        id="quickTagInput"
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                const val = e.currentTarget.value;
+                                                if (val && !data.customTags?.includes(val)) {
+                                                    const newTags = [...(data.customTags || []), val];
+                                                    const updatedData = { ...data, customTags: newTags, selectedTag: val, location: data.venueName };
+                                                    handleDataChange('customTags', newTags);
+                                                    handleDataChange('selectedTag', val);
+                                                    setSelectedTag(val);
+                                                    updateEvent(updatedData as any); // Immediate update
+                                                    e.currentTarget.value = '';
+                                                }
+                                            }
+                                        }}
+                                        style={{ flex: 1, padding: '0.3rem', fontSize: '0.8rem', border: '1px solid #D1D5DB', borderRadius: '4px' }}
+                                    />
+                                    <button
+                                        onClick={() => {
+                                            const input = document.getElementById('quickTagInput') as HTMLInputElement;
+                                            if (input && input.value && !data.customTags?.includes(input.value)) {
+                                                const newTags = [...(data.customTags || []), input.value];
+                                                const updatedData = { ...data, customTags: newTags, selectedTag: input.value, location: data.venueName };
+                                                handleDataChange('customTags', newTags);
+                                                handleDataChange('selectedTag', input.value);
+                                                setSelectedTag(input.value);
+                                                updateEvent(updatedData as any); // Immediate update
+                                                input.value = '';
+                                            }
+                                        }}
+                                        style={{ padding: '0.3rem', backgroundColor: brandColor, color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                                    >
+                                        +
+                                    </button>
+                                </div>
+                                <div style={{ fontSize: '0.75rem', color: '#9CA3AF', marginBottom: '0.3rem' }}>{t('event.select_label')}</div>
+                                <div style={{ maxHeight: '150px', overflowY: 'auto' }}>
+                                    {uniqueSystemTags.map(tag => (
+                                        <div
+                                            key={tag}
+                                            onClick={() => {
+                                                const newTag = tag === selectedTag ? null : tag;
+                                                const updatedData = { ...data, selectedTag: newTag || '', location: data.venueName }; // Handle null assign to string
+                                                setSelectedTag(newTag);
+                                                handleDataChange('selectedTag', newTag);
+                                                updateEvent(updatedData as any);
+                                                setShowTagMenu(false);
+                                            }}
+                                            style={{
+                                                fontSize: '0.8rem', padding: '0.3rem 0.5rem',
+                                                color: tag === selectedTag ? brandColor : '#4B5563',
+                                                cursor: 'pointer', borderRadius: '4px',
+                                                backgroundColor: tag === selectedTag ? '#ECFDF5' : 'transparent',
+                                                display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                                            }}
+                                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = tag === selectedTag ? '#ECFDF5' : '#F3F4F6'}
+                                            onMouseOut={(e) => e.currentTarget.style.backgroundColor = tag === selectedTag ? '#ECFDF5' : 'transparent'}
+                                        >
+                                            {tag}
+                                            {tag === selectedTag && <Check size={12} />}
+                                        </div>
+                                    ))}
+                                    {uniqueSystemTags.length === 0 && (
+                                        <div style={{ fontSize: '0.75rem', color: '#9CA3AF', fontStyle: 'italic', padding: '0.2rem' }}>{t('event.no_tags')}</div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Capacity Dropdown */}
+                    <div style={{ position: 'relative' }}>
+                        <button
+                            onClick={() => { setShowCapacityMenu(!showCapacityMenu); setShowTagMenu(false); }}
+                            style={{ border: '1px solid #E5E7EB', borderRadius: '4px', padding: '0.1rem 0.5rem', fontSize: '0.75rem', color: '#6B7280', display: 'flex', alignItems: 'center', gap: '5px', background: 'white', cursor: 'pointer' }}
+                            title="Ajustar Capacidad"
+                        >
+                            Plan: {data.maxCapacity || 50} {t('event.people')} <span style={{ color: brandColor }}>+</span>
+                        </button>
+                        {showCapacityMenu && (
+                            <div style={{
+                                position: 'absolute', top: '100%', left: 0, marginTop: '0.5rem',
+                                backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                                border: '1px solid #E5E7EB', padding: '0.5rem', width: '120px', zIndex: 50
+                            }}>
+                                {[50, 80, 100, 120, 140, 150, 180, 200, 250, 300].map(cap => (
+                                    <button
+                                        key={cap}
+                                        onClick={() => {
+                                            handleDataChange('maxCapacity', cap);
+                                            setShowCapacityMenu(false);
+                                        }}
+                                        style={{
+                                            display: 'block', width: '100%', textAlign: 'left', padding: '0.4rem',
+                                            fontSize: '0.8rem', color: '#374151', background: 'none', border: 'none', cursor: 'pointer',
+                                            backgroundColor: data.maxCapacity === cap ? '#F3F4F6' : 'transparent',
+                                            borderRadius: '4px'
+                                        }}
+                                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#F9FAFB'}
+                                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = data.maxCapacity === cap ? '#F3F4F6' : 'transparent'}
+                                    >
+                                        {cap} pax
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
                     <div style={{ fontSize: '0.75rem', color: '#6B7280', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                        <Check size={12} /> Se guardaron todos los cambios
+                        <Check size={12} /> {isSaved ? t('editor.saved') : t('editor.saving')}
                     </div>
                     <button
                         onClick={() => {
@@ -228,7 +395,7 @@ const InvitationDashboard: React.FC = () => {
                         }}
                         style={{ backgroundColor: brandColor, color: 'white', border: 'none', padding: '0.6rem 2rem', borderRadius: '4px', fontWeight: 700, letterSpacing: '0.5px', cursor: 'pointer', fontSize: '0.8rem' }}
                     >
-                        SIGUIENTE &gt;
+                        {t('editor.next')} &gt;
                     </button>
                 </div>
             </div>
@@ -259,7 +426,7 @@ const InvitationDashboard: React.FC = () => {
 
             {/* Main Content Area */}
             <div style={{ flex: 1, overflow: 'hidden', backgroundColor: '#F3F4F6' }}>
-                {currentStep === 2 ? ( // Preview Step needs special handling to be full height without padding if needed, or structured same
+                {currentStep === 2 ? (
                     <div style={{ height: '100%', overflowY: 'auto', padding: '0', backgroundColor: '#333' }}>
                         <div style={{ width: '100%', height: '100%', margin: '0 auto', backgroundColor: 'white', overflow: 'hidden' }}>
                             <InvitationPreview data={data} isGuest={true} />

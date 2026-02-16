@@ -1,0 +1,16 @@
+src/components/EventDetails.tsx(10,21): error TS6133: 'ImageIcon' is declared but its value is never read.
+src/components/EventDetails.tsx(89,15): error TS6133: 'updatedEvent' is declared but its value is never read.
+src/components/GuestManager.tsx(1,27): error TS6133: 'useEffect' is declared but its value is never read.
+src/components/InvitationDashboard.tsx(289,65): error TS2345: Argument of type '{ customTags: string[]; selectedTag: string; location: string; id?: string; partner1: string; partner2: string; date: string; time: string; venueName: string; venueAddress: string; message: string; ... 18 more ...; design?: { backgroundColor?: string; backgroundImage?: string; overlayOpacity?: number; borderStyle?: ...' is not assignable to parameter of type 'EventData'.
+  Types of property 'id' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+src/components/InvitationDashboard.tsx(305,61): error TS2345: Argument of type '{ customTags: string[]; selectedTag: string; location: string; id?: string; partner1: string; partner2: string; date: string; time: string; venueName: string; venueAddress: string; message: string; ... 18 more ...; design?: { backgroundColor?: string; backgroundImage?: string; overlayOpacity?: number; borderStyle?: ...' is not assignable to parameter of type 'EventData'.
+  Types of property 'id' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+src/components/InvitationDashboard.tsx(324,61): error TS2345: Argument of type '{ selectedTag: string; location: string; id?: string; partner1: string; partner2: string; date: string; time: string; venueName: string; venueAddress: string; message: string; theme: string; ... 18 more ...; design?: { backgroundColor?: string; backgroundImage?: string; overlayOpacity?: number; borderStyle?: "none" ...' is not assignable to parameter of type 'EventData'.
+  Types of property 'id' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+src/components/UI/Envelope.tsx(1,27): error TS6133: 'useEffect' is declared but its value is never read.
