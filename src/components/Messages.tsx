@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { useEvents } from '../context/EventsContext';
-import { MessageSquare, Calendar, User, CheckCircle, XCircle, Search } from 'lucide-react';
+import { MessageSquare, User, CheckCircle, XCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const Messages: React.FC = () => {
