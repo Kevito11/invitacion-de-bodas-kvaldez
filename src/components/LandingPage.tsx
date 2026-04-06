@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
     ArrowRight, CheckCircle,
-    Layout, Palette, User, ChevronDown, ChevronUp, Star, Heart, Smartphone, Globe, Moon, Sun
+    Layout, Palette, User, ChevronDown, ChevronUp, Star, Heart, Smartphone, Globe, Moon, Sun, Menu, X
 } from 'lucide-react';
 import heroCouple from '../assets/hero_bw_couple.jpg';
 import heroHands from '../assets/hero_bw_hands.png';
@@ -135,6 +135,7 @@ const LandingPage: React.FC = () => {
     const [activeHeroImage, setActiveHeroImage] = useState(0);
     const [lang, setLang] = useState<'es' | 'en'>('es');
     const [darkMode, setDarkMode] = useState(false);
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     const t = translations[lang];
     const heroImages = [heroCouple, heroHands];
@@ -207,14 +208,100 @@ const LandingPage: React.FC = () => {
                 
                 @media (max-width: 900px) {
                     header { flex-direction: column; }
-                    header > div { min-height: 50vh !important; }
+                    header > div:first-child { min-height: 25vh !important; flex: 0 0 25vh !important; }
+                    header > div:last-child { padding: 2.5rem 1.5rem !important; }
+                    header h1 { font-size: 2.5rem !important; }
                     .feature-row { flexDirection: column !important; text-align: center; gap: 2rem !important; }
                     .feature-row ul { align-items: center; }
+                    .desktop-menu { display: flex !important; gap: 0.5rem !important; }
+                    .desktop-menu button { padding: 0.4rem !important; }
+                    .nav-text { display: none !important; }
+                    .mobile-menu-btn { display: none !important; }
+                    .main-nav { background-color: ${colors.light} !important; border-bottom: 1px solid ${colors.border}; }
+                    .brand-logo { font-size: 1.2rem !important; }
                 }
             `}</style>
 
+            {/* Mobile Menu Overlay */}
+            {mobileMenuOpen && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100vh',
+                    backgroundColor: colors.light,
+                    zIndex: 200,
+                    padding: '2rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '2rem',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 0.3s ease'
+                }}>
+                    <button
+                        onClick={() => setMobileMenuOpen(false)}
+                        style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', background: 'none', border: 'none', cursor: 'pointer', color: colors.dark }}
+                    >
+                        <X size={32} />
+                    </button>
+
+                    <button
+                        onClick={() => { setDarkMode(!darkMode); setMobileMenuOpen(false); }}
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', background: 'none', border: 'none', fontSize: '1.2rem', color: colors.dark, fontWeight: 600 }}
+                    >
+                        {darkMode ? <Moon size={24} /> : <Sun size={24} />}
+                        {darkMode ? (lang === 'en' ? 'Dark Mode' : 'Modo Oscuro') : (lang === 'en' ? 'Light Mode' : 'Modo Claro')}
+                    </button>
+
+                    <button
+                        onClick={() => { setLang(l => l === 'es' ? 'en' : 'es'); setMobileMenuOpen(false); }}
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', background: 'none', border: 'none', fontSize: '1.2rem', color: colors.dark, fontWeight: 600 }}
+                    >
+                        <Globe size={24} /> {lang === 'es' ? 'Lenguaje: Español' : 'Language: English'}
+                    </button>
+
+                    {!user && (
+                        <button
+                            onClick={() => { setShowLoginModal(true); setMobileMenuOpen(false); }}
+                            style={{
+                                background: 'transparent',
+                                border: `2px solid ${colors.primary}`,
+                                color: colors.primary,
+                                padding: '1rem 2.5rem',
+                                borderRadius: '50px',
+                                fontSize: '1.2rem',
+                                fontWeight: 600,
+                                marginTop: '1rem'
+                            }}
+                        >
+                            {t.nav.login}
+                        </button>
+                    )}
+
+                    {user && (
+                        <button
+                            onClick={() => navigate('/dashboard')}
+                            style={{
+                                background: colors.primary,
+                                color: '#fff',
+                                padding: '1rem 2.5rem',
+                                borderRadius: '50px',
+                                fontSize: '1.2rem',
+                                fontWeight: 600,
+                                border: 'none',
+                                marginTop: '1rem'
+                            }}
+                        >
+                            {t.nav.panel}
+                        </button>
+                    )}
+                </div>
+            )}
+
             {/* Navbar */}
-            <nav style={{
+            <nav className="main-nav" style={{
                 position: 'fixed',
                 width: '100%',
                 top: 0,
@@ -235,7 +322,7 @@ const LandingPage: React.FC = () => {
                     justifyContent: 'space-between',
                     alignItems: 'center',
                 }}>
-                    <div style={{
+                    <div className="brand-logo" style={{
                         fontFamily: "'Playfair Display', serif",
                         fontSize: '1.6rem',
                         fontWeight: 700,
@@ -251,7 +338,8 @@ const LandingPage: React.FC = () => {
                         BodaDigital
                     </div>
 
-                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    {/* Desktop Menu */}
+                    <div className="desktop-menu" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                         {/* Dark Mode Toggle */}
                         <button
                             onClick={() => setDarkMode(!darkMode)}
@@ -264,8 +352,8 @@ const LandingPage: React.FC = () => {
                                 transition: 'all 0.2s'
                             }}
                         >
-                            {darkMode ? <Moon size={14} /> : <Sun size={14} />}
-                            {darkMode ? (lang === 'en' ? 'Dark' : 'Noche') : (lang === 'en' ? 'Light' : 'Día')}
+                            {darkMode ? <Moon size={18} /> : <Sun size={18} />}
+                            <span className="nav-text">{darkMode ? (lang === 'en' ? 'Dark' : 'Noche') : (lang === 'en' ? 'Light' : 'Día')}</span>
                         </button>
 
                         {/* Language Toggle */}
@@ -279,7 +367,7 @@ const LandingPage: React.FC = () => {
                                 cursor: 'pointer'
                             }}
                         >
-                            <Globe size={14} /> {lang.toUpperCase()}
+                            <Globe size={18} /> <span className="nav-text">{lang.toUpperCase()}</span>
                         </button>
 
                         {!user && (
@@ -292,10 +380,13 @@ const LandingPage: React.FC = () => {
                                     fontWeight: 600,
                                     fontSize: '0.95rem',
                                     cursor: 'pointer',
-                                    padding: '0.5rem'
+                                    padding: '0.5rem',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.5rem'
                                 }}
                             >
-                                {t.nav.login}
+                                <User size={20} /> <span className="nav-text">{t.nav.login}</span>
                             </button>
                         )}
                         {user && (
@@ -310,13 +401,32 @@ const LandingPage: React.FC = () => {
                                     fontWeight: 600,
                                     border: 'none',
                                     cursor: 'pointer',
-                                    boxShadow: '0 4px 6px rgba(0,0,0,0.05)'
+                                    boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.5rem'
                                 }}
                             >
-                                {t.nav.panel}
+                                <Layout size={20} /> <span className="nav-text">{t.nav.panel}</span>
                             </button>
                         )}
                     </div>
+
+                    {/* Mobile Menu Button */}
+                    <button
+                        className="mobile-menu-btn"
+                        onClick={() => setMobileMenuOpen(true)}
+                        style={{
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            color: colors.dark,
+                            display: 'none', // Controlled by CSS
+                            padding: '0.5rem'
+                        }}
+                    >
+                        <Menu size={28} />
+                    </button>
                 </div>
             </nav>
 
@@ -360,25 +470,25 @@ const LandingPage: React.FC = () => {
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'center',
-                    padding: 'clamp(3rem, 5vw, 6rem)',
+                    padding: 'clamp(2rem, 4vw, 4rem)',
                     backgroundColor: colors.light,
                     transition: 'background-color 0.3s ease'
                 }}>
                     <div style={{ maxWidth: '600px' }}>
                         <h1 className="animate-fade-up delay-100" style={{
                             fontFamily: "'Playfair Display', serif",
-                            fontSize: 'clamp(2.5rem, 5vw, 4rem)',
+                            fontSize: 'clamp(2rem, 4vw, 3rem)',
                             color: colors.dark,
                             lineHeight: 1.1,
-                            marginBottom: '1.5rem',
-                            letterSpacing: '-1px'
+                            marginBottom: '1rem',
+                            letterSpacing: '-0.5px'
                         }}>
                             {t.hero.title1} <br />
                             <span style={{ fontStyle: 'italic', color: colors.primary }}>{t.hero.title2}</span>
                         </h1>
 
                         <p className="animate-fade-up delay-200" style={{
-                            fontSize: '1.1rem', color: colors.textMuted, lineHeight: 1.7, marginBottom: '2.5rem'
+                            fontSize: '1rem', color: colors.textMuted, lineHeight: 1.7, marginBottom: '2.5rem'
                         }}>
                             {t.hero.subtitle}
                         </p>
@@ -434,16 +544,16 @@ const LandingPage: React.FC = () => {
             {/* Content Sections */}
 
             {/* Features Zig Zag */}
-            <section style={{ padding: '6rem 1.5rem', backgroundColor: colors.white, transition: 'background-color 0.3s ease' }}>
-                <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '8rem' }}>
+            <section style={{ padding: '4rem 1.5rem', backgroundColor: colors.white, transition: 'background-color 0.3s ease' }}>
+                <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '5rem' }}>
                     {/* Feature 1 */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4rem', flexDirection: 'row' }} className="feature-row">
                         <div style={{ flex: 1 }}>
                             <div style={{ width: '50px', height: '50px', background: darkMode ? '#374151' : '#FFF0F5', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem' }}>
                                 <Palette size={24} color={colors.primary} />
                             </div>
-                            <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: '2.5rem', marginBottom: '1.5rem', color: colors.dark }}>{t.features.f1.title}</h2>
-                            <p style={{ color: colors.textMuted, lineHeight: 1.7, fontSize: '1.1rem', marginBottom: '2rem' }}>
+                            <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: '2rem', marginBottom: '1rem', color: colors.dark }}>{t.features.f1.title}</h2>
+                            <p style={{ color: colors.textMuted, lineHeight: 1.7, fontSize: '1rem', marginBottom: '2rem' }}>
                                 {t.features.f1.desc}
                             </p>
                             <ul style={{ padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -465,8 +575,8 @@ const LandingPage: React.FC = () => {
                             <div style={{ width: '50px', height: '50px', background: darkMode ? '#374151' : '#F0FFF4', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem' }}>
                                 <Smartphone size={24} color={colors.secondary} />
                             </div>
-                            <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: '2.5rem', marginBottom: '1.5rem', color: colors.dark }}>{t.features.f2.title}</h2>
-                            <p style={{ color: colors.textMuted, lineHeight: 1.7, fontSize: '1.1rem', marginBottom: '2rem' }}>
+                            <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: '2rem', marginBottom: '1rem', color: colors.dark }}>{t.features.f2.title}</h2>
+                            <p style={{ color: colors.textMuted, lineHeight: 1.7, fontSize: '1rem', marginBottom: '2rem' }}>
                                 {t.features.f2.desc}
                             </p>
                             <ul style={{ padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -485,11 +595,11 @@ const LandingPage: React.FC = () => {
             </section>
 
             {/* Design Showcase */}
-            <section style={{ padding: '6rem 1.5rem', backgroundColor: colors.light, transition: 'background-color 0.3s ease' }}>
+            <section style={{ padding: '4rem 1.5rem', backgroundColor: colors.light, transition: 'background-color 0.3s ease' }}>
                 <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
                     <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
-                        <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: '2.5rem', color: colors.dark, margin: 0 }}>{t.showcase.title}</h2>
-                        <p style={{ fontSize: '1.1rem', color: colors.textMuted, marginTop: '1rem' }}>{t.showcase.subtitle}</p>
+                        <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: '2rem', color: colors.dark, margin: 0 }}>{t.showcase.title}</h2>
+                        <p style={{ fontSize: '1rem', color: colors.textMuted, marginTop: '1rem' }}>{t.showcase.subtitle}</p>
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
@@ -524,7 +634,7 @@ const LandingPage: React.FC = () => {
                                     </div>
                                 </div>
                                 <div style={{ padding: '1.5rem', textAlign: 'center' }}>
-                                    <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: colors.dark, margin: 0 }}>{design.name}</h3>
+                                    <h3 style={{ fontSize: '1rem', fontWeight: 600, color: colors.dark, margin: 0 }}>{design.name}</h3>
                                 </div>
                             </div>
                         ))}
@@ -552,7 +662,7 @@ const LandingPage: React.FC = () => {
             </section>
 
             {/* Testimonial */}
-            <section style={{ padding: '6rem 1.5rem', backgroundColor: darkMode ? '#000' : colors.dark, color: 'white', textAlign: 'center' }}>
+            <section style={{ padding: '4rem 1.5rem', backgroundColor: darkMode ? '#000' : colors.dark, color: 'white', textAlign: 'center' }}>
                 <div style={{ maxWidth: '800px', margin: '0 auto' }}>
                     <div style={{ marginBottom: '2rem' }}><Star size={24} fill={colors.primary} color={colors.primary} /></div>
                     <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: '2rem', fontStyle: 'italic', lineHeight: 1.6, marginBottom: '2rem' }}>
@@ -565,9 +675,9 @@ const LandingPage: React.FC = () => {
             </section>
 
             {/* FAQ */}
-            <section style={{ padding: '6rem 1.5rem', backgroundColor: colors.white, transition: 'background-color 0.3s ease' }}>
+            <section style={{ padding: '4rem 1.5rem', backgroundColor: colors.white, transition: 'background-color 0.3s ease' }}>
                 <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-                    <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: '2.5rem', color: colors.dark, marginBottom: '3rem', textAlign: 'center' }}>{t.faq.title}</h2>
+                    <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: '2rem', color: colors.dark, marginBottom: '2rem', textAlign: 'center' }}>{t.faq.title}</h2>
                     <div style={{ display: 'grid', gap: '1.5rem' }}>
                         {t.faq.items.map((faq, i) => (
                             <div key={i} style={{ borderBottom: `1px solid ${colors.border}`, paddingBottom: '1.5rem' }}>
@@ -576,7 +686,7 @@ const LandingPage: React.FC = () => {
                                     style={{
                                         width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                                         background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
-                                        fontSize: '1.1rem', fontWeight: 600, color: colors.dark, fontFamily: "'Playfair Display', serif"
+                                        fontSize: '1rem', fontWeight: 600, color: colors.dark, fontFamily: "'Playfair Display', serif"
                                     }}>
                                     {faq.q}
                                     {openFaq === i ? <ChevronUp size={20} /> : <ChevronDown size={20} />}

@@ -22,3 +22,16 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Secrets and environment variables
+.env*
+
+# Build logs and temporary files
+build_*.txt
+build*.log
+git_files.txt
+build_error.log
+build_errors.txt
+build_log.txt
+build_log_*.txt
+build_err_*.txt

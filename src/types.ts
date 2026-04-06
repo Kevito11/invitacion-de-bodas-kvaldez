@@ -52,6 +52,7 @@ export interface InvitationData {
         backgroundColor?: string;
         backgroundImage?: string;
         overlayOpacity?: number;
+        overlayColor?: string; // New: Custom overlay color
         borderStyle?: 'none' | 'solid' | 'double' | 'gold-frame' | 'floral';
         borderColor?: string;
         corners?: 'square' | 'rounded';

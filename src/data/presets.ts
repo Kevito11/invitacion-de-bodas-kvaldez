@@ -11,12 +11,15 @@ export const DESIGN_PRESETS: Preset[] = [
     {
         id: 'gold-luxury',
         name: 'Lujo Dorado',
-        description: 'Elegancia atemporal con detalles dorados y terciopelo.',
+        description: 'Elegancia atemporal con detalles dorados y estructura clásica.',
         settings: {
-            theme: 'gold',
+            theme: 'classic',
             font: 'greatvibes',
             layout: 'classic',
-            backgroundImageUrl: '', // Reset to color logic
+            design: {
+                overlayOpacity: 0.1,
+                borderStyle: 'gold-frame'
+            },
             envelope: {
                 enabled: true,
                 type: 'classic',
@@ -31,10 +34,13 @@ export const DESIGN_PRESETS: Preset[] = [
         name: 'Romance Rosa',
         description: 'Suave y soñador, perfecto para bodas románticas.',
         settings: {
-            theme: 'rose',
+            theme: 'roses',
             font: 'alexbrush',
-            layout: 'classic',
-            backgroundImageUrl: '',
+            layout: 'scroll',
+            design: {
+                overlayOpacity: 0.8,
+                overlayColor: '#fff0f5'
+            },
             envelope: {
                 enabled: true,
                 type: 'rounded',
@@ -49,10 +55,13 @@ export const DESIGN_PRESETS: Preset[] = [
         name: 'Naturaleza Sage',
         description: 'Fresco y orgánico, ideal para bodas al aire libre.',
         settings: {
-            theme: 'sage',
+            theme: 'botanical',
             font: 'dancing',
             layout: 'scroll',
-            backgroundImageUrl: '',
+            design: {
+                overlayOpacity: 0.85,
+                overlayColor: '#ffffff'
+            },
             envelope: {
                 enabled: true,
                 type: 'square',
@@ -64,13 +73,17 @@ export const DESIGN_PRESETS: Preset[] = [
     },
     {
         id: 'midnight-blue',
-        name: 'Noche Azul',
-        description: 'Sofisticado y profundo, para eventos de gala.',
+        name: 'Noche Estelar',
+        description: 'Sofisticado y profundo, ideal para eventos de noche.',
         settings: {
-            theme: 'blue',
+            theme: 'navy',
             font: 'pinyon',
             layout: 'slider',
-            backgroundImageUrl: '',
+            design: {
+                overlayOpacity: 0.7,
+                overlayColor: '#0a0a28',
+                primaryColor: '#ffffff'
+            },
             envelope: {
                 enabled: true,
                 type: 'pointed',
@@ -81,19 +94,22 @@ export const DESIGN_PRESETS: Preset[] = [
         }
     },
     {
-        id: 'lavender-dream',
-        name: 'Sueño Lavanda',
-        description: 'Delicado y mágico, con un toque de fantasía.',
+        id: 'boho-chic',
+        name: 'Boho Chic',
+        description: 'Cálido y acogedor, con tonos tierra y estilo libre.',
         settings: {
-            theme: 'lavender',
+            theme: 'boho',
             font: 'parisienne',
-            layout: 'classic',
-            backgroundImageUrl: '',
+            layout: 'scroll',
+            design: {
+                overlayOpacity: 0.8,
+                overlayColor: '#fff3e0'
+            },
             envelope: {
                 enabled: true,
                 type: 'classic',
                 material: 'paper',
-                color: '#E6E6FA',
+                color: '#D2691E',
                 finish: 'matte'
             }
         }

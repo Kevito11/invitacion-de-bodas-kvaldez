@@ -7,6 +7,9 @@ export interface Theme {
     backgroundImage?: string;
     borderStyle?: string;
     contentOverlay?: string; // New: For readability (e.g., semi-transparent white box)
+    overlayColor?: string; // Default overlay color
+    overlayOpacity?: number; // Default overlay opacity
+    layout?: 'scroll' | 'slider' | 'classic' | 'modern'; // Preferred layout
     font?: string;
     blur?: number; // Default blur amount (0-20)
     saturation?: number; // Default saturation percentage (0-100)
@@ -22,6 +25,9 @@ export const THEMES: Theme[] = [
         // Flatlay of eucalyptus leaves (Nature design)
         backgroundImage: 'url("https://images.unsplash.com/photo-1544131562-b131df33a18a?q=80&w=2000&auto=format&fit=crop")',
         contentOverlay: 'rgba(255, 255, 255, 0.85)',
+        overlayColor: '#ffffff',
+        overlayOpacity: 0.85,
+        layout: 'scroll',
         borderStyle: 'double 1px #2e4a3b',
         blur: 2,
         saturation: 90
@@ -35,6 +41,9 @@ export const THEMES: Theme[] = [
         // Dark moody forest (Landscape) - No furniture
         backgroundImage: 'url("https://images.unsplash.com/photo-1511497584788-876760111969?q=80&w=2000&auto=format&fit=crop")',
         contentOverlay: 'rgba(255, 255, 255, 0.9)',
+        overlayColor: '#ffffff',
+        overlayOpacity: 0.9,
+        layout: 'classic',
         borderStyle: 'dashed 2px #5d4037',
         blur: 4,
         saturation: 60
@@ -48,6 +57,9 @@ export const THEMES: Theme[] = [
         // Marble Texture (Texture)
         backgroundImage: 'url("https://images.unsplash.com/photo-1563089145-599997674d42?q=80&w=2000&auto=format&fit=crop")',
         contentOverlay: 'rgba(255, 255, 255, 0.85)',
+        overlayColor: '#ffffff',
+        overlayOpacity: 0.85,
+        layout: 'classic',
         borderStyle: 'solid 3px #d4af37',
         blur: 0,
         saturation: 0
@@ -61,6 +73,9 @@ export const THEMES: Theme[] = [
         // Starry Night Sky (Landscape)
         backgroundImage: 'url("https://images.unsplash.com/photo-1519681393798-38e43269d877?q=80&w=2000&auto=format&fit=crop")',
         contentOverlay: 'rgba(10, 10, 40, 0.65)',
+        overlayColor: '#0a0a28',
+        overlayOpacity: 0.65,
+        layout: 'slider',
         borderStyle: 'double 1px rgba(255,255,255,0.3)',
         blur: 3,
         saturation: 100
@@ -74,6 +89,9 @@ export const THEMES: Theme[] = [
         // User's Scrapbook Image
         backgroundImage: 'url("/themes/vintage-scrapbook.jpg")',
         contentOverlay: 'rgba(255, 250, 240, 0.85)',
+        overlayColor: '#fffaf0',
+        overlayOpacity: 0.85,
+        layout: 'scroll',
         borderStyle: 'none',
         blur: 2,
         saturation: 50
@@ -87,6 +105,9 @@ export const THEMES: Theme[] = [
         // Soft roses texture/flatlay (Nature design)
         backgroundImage: 'url("https://images.unsplash.com/photo-1559563362-c667ba5f5480?q=80&w=2000&auto=format&fit=crop")',
         contentOverlay: 'rgba(255, 255, 255, 0.85)',
+        overlayColor: '#ffffff',
+        overlayOpacity: 0.85,
+        layout: 'scroll',
         borderStyle: 'solid 1px #f48fb1',
         blur: 5,
         saturation: 80
@@ -100,6 +121,9 @@ export const THEMES: Theme[] = [
         // White Paper Texture close up (Texture)
         backgroundImage: 'url("https://images.unsplash.com/photo-1525795460596-3c07e0dfd6f6?q=80&w=2000&auto=format&fit=crop")',
         contentOverlay: 'rgba(255, 255, 255, 0.8)',
+        overlayColor: '#ffffff',
+        overlayOpacity: 0.8,
+        layout: 'modern',
         borderStyle: 'solid 1px #eeeeee',
         blur: 0,
         saturation: 0
@@ -113,6 +137,9 @@ export const THEMES: Theme[] = [
         // Dark Stone/Concrete Texture (Texture)
         backgroundImage: 'url("https://images.unsplash.com/photo-1515263487990-61b07816b324?q=80&w=2000&auto=format&fit=crop")',
         contentOverlay: 'rgba(255, 255, 255, 0.85)',
+        overlayColor: '#ffffff',
+        overlayOpacity: 0.85,
+        layout: 'modern',
         borderStyle: 'solid 2px #bcaaa4',
         blur: 1,
         saturation: 40
@@ -126,6 +153,9 @@ export const THEMES: Theme[] = [
         // Wheat Field Landscape (Landscape)
         backgroundImage: 'url("https://images.unsplash.com/photo-1469502758178-5a49826a761e?q=80&w=2000&auto=format&fit=crop")',
         contentOverlay: 'rgba(255, 255, 255, 0.85)',
+        overlayColor: '#ffffff',
+        overlayOpacity: 0.85,
+        layout: 'scroll',
         borderStyle: 'solid 1px #ff7043',
         blur: 3,
         saturation: 90
@@ -139,6 +169,9 @@ export const THEMES: Theme[] = [
         // Cream/Gold Paper Texture
         backgroundImage: 'url("https://images.unsplash.com/photo-1628148973686-2244f6f87ad3?auto=format&fit=crop&w=1080")',
         contentOverlay: 'rgba(255, 255, 255, 0.85)',
+        overlayColor: '#ffffff',
+        overlayOpacity: 0.85,
+        layout: 'classic',
         borderStyle: 'double 3px #d4af37',
         blur: 0,
         saturation: 100

@@ -34,6 +34,8 @@ export const translations: Record<Language, Record<string, string>> = {
         'nav.language': 'IDIOMA',
         'nav.my_events': 'MIS EVENTOS', // Added alias
         'nav.no_events': 'No tienes eventos aún', // Added
+        'nav.pin_sidebar': 'Fijar barra lateral',
+        'nav.unpin_sidebar': 'Desfijar barra lateral',
 
         // Dashboard
         'dashboard.title': 'Mis Eventos',
@@ -175,8 +177,8 @@ export const translations: Record<Language, Record<string, string>> = {
 
         // Step: Details
         'details.title': 'Detalles del Evento',
-        'details.label.p1': 'Novio/a 1',
-        'details.label.p2': 'Novio/a 2',
+        'details.label.p1': 'Novia',
+        'details.label.p2': 'Novio',
         'details.label.date': 'Fecha',
         'details.label.time': 'Hora (Reloj)',
         'details.label.venue': 'Lugar del Evento',
@@ -257,6 +259,8 @@ export const translations: Record<Language, Record<string, string>> = {
         'nav.language': 'LANGUAGE',
         'nav.my_events': 'MY EVENTS', // Added alias
         'nav.no_events': 'No events yet', // Added
+        'nav.pin_sidebar': 'Pin Sidebar',
+        'nav.unpin_sidebar': 'Unpin Sidebar',
 
         // Dashboard
         'dashboard.title': 'My Events',

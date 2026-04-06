@@ -21,6 +21,8 @@ interface EnvelopeProps {
         color: string;
         text?: string;
     };
+    initialStep?: 'front' | 'flipping' | 'back' | 'opening' | 'extracting' | 'revealing' | 'done';
+    hideContent?: boolean; // New prop to hide card
     children?: React.ReactNode;
 }
 
@@ -34,9 +36,37 @@ const Envelope: React.FC<EnvelopeProps> = ({
     liner,
     stamp,
     seal,
+    initialStep = 'front',
+    hideContent = false,
     children
 }) => {
-    const [step, setStep] = useState<'front' | 'flipping' | 'back' | 'opening' | 'extracting' | 'revealing' | 'done'>('front');
+    const [step, setStep] = useState<'front' | 'flipping' | 'back' | 'opening' | 'extracting' | 'revealing' | 'done'>(initialStep);
+
+    // Update step if initialStep changes (for controlled preview)
+    React.useEffect(() => {
+        if (initialStep === step) return;
+
+        // Sequence: Front -> Opening (Flip first, then open flap)
+        if (step === 'front' && initialStep === 'opening') {
+            setStep('back'); // Start by showing back (trigger flip)
+            const timer = setTimeout(() => {
+                setStep('opening'); // Then open the flap
+            }, 500); // Halfway through flip
+            return () => clearTimeout(timer);
+        }
+
+        // Sequence: Opening -> Front (Close flap first, then flip front)
+        if ((step === 'opening' || step === 'done' || step === 'revealing') && initialStep === 'front') {
+            setStep('back'); // Close flap first
+            const timer = setTimeout(() => {
+                setStep('front'); // Then flip to front
+            }, 400);
+            return () => clearTimeout(timer);
+        }
+
+        // Direct update for other cases
+        setStep(initialStep);
+    }, [initialStep]);
 
     // -- TEXTURE & FINISH HELPERS --
     // Wall/Plaster Texture: Fractal Noise to simulate "wall imperfections"
@@ -177,11 +207,12 @@ const Envelope: React.FC<EnvelopeProps> = ({
 
                     <div style={shineStyle}></div>
                     <div style={{
-                        border: `1px solid ${isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)'}`,
+                        border: `1px solid ${isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.2)'}`, // Increased border visibility
                         width: '92%', height: '88%',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         flexDirection: 'column',
-                        zIndex: 10, position: 'relative'
+                        zIndex: 10, position: 'relative',
+                        boxShadow: 'inset 0 0 10px rgba(0,0,0,0.05)' // Subtle inset for depth
                     }}>
                         {/* CUSTOM STAMP */}
                         {stamp?.enabled && stamp.url ? (
@@ -269,84 +300,86 @@ const Envelope: React.FC<EnvelopeProps> = ({
                         <div style={shineStyle}></div>
                     </div>
 
-                    {/* CARD / LETTER */}
-                    <div style={{
-                        position: 'absolute',
-                        left: '4%', right: '4%',
-                        top: '4%', bottom: '4%',
-                        zIndex: 5,
-                        transformStyle: 'preserve-3d',
-                        // Hide card COMPLETELY until opening starts to prevent "seeing through"
-                        opacity: isOpening ? 1 : 0,
-                        transition: 'opacity 0.2s ease-in, transform 1.2s cubic-bezier(0.4, 0, 0.2, 1)', // Fade in quickly on open
-                        transform: isExtracting
-                            ? (isRevealing
-                                ? 'translateY(-250px) translateZ(200px) rotateX(0deg) rotateY(180deg) scale(1.15)' // FLIP HERE
-                                : 'translateY(-60%) translateZ(10px)')
-                            : 'translateY(0) translateZ(2px)',
-                    }}>
-                        {/* Card Container (Double Sided) */}
+                    {/* CARD / LETTER - Hidden if hideContent is true */}
+                    {!hideContent && (
                         <div style={{
-                            position: 'relative', width: '100%', height: '100%',
+                            position: 'absolute',
+                            left: '4%', right: '4%',
+                            top: '4%', bottom: '4%',
+                            zIndex: 5,
                             transformStyle: 'preserve-3d',
+                            // Hide card COMPLETELY until opening starts to prevent "seeing through"
+                            opacity: isOpening ? 1 : 0,
+                            transition: 'opacity 0.2s ease-in, transform 1.2s cubic-bezier(0.4, 0, 0.2, 1)', // Fade in quickly on open
+                            transform: isExtracting
+                                ? (isRevealing
+                                    ? 'translateY(-250px) translateZ(200px) rotateX(0deg) rotateY(180deg) scale(1.15)' // FLIP HERE
+                                    : 'translateY(-60%) translateZ(10px)')
+                                : 'translateY(0) translateZ(2px)',
                         }}>
-                            {/* Card BACK (Design/KP - Visible initially when envelope is Back-facing) */}
+                            {/* Card Container (Double Sided) */}
                             <div style={{
-                                position: 'absolute', inset: 0,
-                                backgroundColor: '#e6dfd5',
-                                backgroundImage: `repeating-linear-gradient(45deg, rgba(0,0,0,0.02) 0px, rgba(0,0,0,0.02) 2px, transparent 2px, transparent 4px), ${texture}`,
-                                backfaceVisibility: 'hidden',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                // FIX: This must be 180deg so that (180+180 = 360) it faces the viewer initially
-                                transform: 'rotateY(180deg)',
-                                borderRadius: '2px',
-                                // Sharper Border
-                                border: '1px solid rgba(0,0,0,0.2)',
-                                boxShadow: 'inset 0 0 20px rgba(0,0,0,0.1)'
+                                position: 'relative', width: '100%', height: '100%',
+                                transformStyle: 'preserve-3d',
                             }}>
-                                {/* Opaque Blocker */}
-                                <div style={{ position: 'absolute', inset: 0, backgroundColor: '#e6dfd5', borderRadius: '2px', backfaceVisibility: 'hidden' }}></div>
-
+                                {/* Card BACK (Design/KP - Visible initially when envelope is Back-facing) */}
                                 <div style={{
-                                    width: '50px', height: '50px',
-                                    border: '2px solid rgba(0,0,0,0.2)',
-                                    borderRadius: '50%',
+                                    position: 'absolute', inset: 0,
+                                    backgroundColor: '#e6dfd5',
+                                    backgroundImage: `repeating-linear-gradient(45deg, rgba(0,0,0,0.02) 0px, rgba(0,0,0,0.02) 2px, transparent 2px, transparent 4px), ${texture}`,
+                                    backfaceVisibility: 'hidden',
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    color: 'rgba(0,0,0,0.4)', fontWeight: 'bold', fontFamily: 'serif',
-                                    zIndex: 2, transform: 'translateZ(1px)' // Pop out
+                                    // FIX: This must be 180deg so that (180+180 = 360) it faces the viewer initially
+                                    transform: 'rotateY(180deg)',
+                                    borderRadius: '2px',
+                                    // Sharper Border
+                                    border: '1px solid rgba(0,0,0,0.2)',
+                                    boxShadow: 'inset 0 0 20px rgba(0,0,0,0.1)'
                                 }}>
-                                    {senderName
-                                        ? senderName.split('&').map(n => n.trim()[0]).join('')
-                                        : 'KP'}
-                                </div>
-                            </div>
+                                    {/* Opaque Blocker */}
+                                    <div style={{ position: 'absolute', inset: 0, backgroundColor: '#e6dfd5', borderRadius: '2px', backfaceVisibility: 'hidden' }}></div>
 
-                            {/* Card FRONT (Content - Hidden initially, revealed after flip) */}
-                            <div style={{
-                                position: 'absolute', inset: 0,
-                                backgroundColor: '#fff',
-                                backfaceVisibility: 'hidden',
-                                // FIX: This must be 0deg so that (0+180 = 180) it faces AWAY initially
-                                transform: 'rotateY(0deg)',
-                                borderRadius: '2px',
-                                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                                // Subtle border for definition
-                                border: '1px solid rgba(0,0,0,0.1)',
-                                boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
-                            }}>
+                                    <div style={{
+                                        width: '50px', height: '50px',
+                                        border: '2px solid rgba(0,0,0,0.2)',
+                                        borderRadius: '50%',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        color: 'rgba(0,0,0,0.4)', fontWeight: 'bold', fontFamily: 'serif',
+                                        zIndex: 2, transform: 'translateZ(1px)' // Pop out
+                                    }}>
+                                        {senderName
+                                            ? senderName.split('&').map(n => n.trim()[0]).join('')
+                                            : 'KP'}
+                                    </div>
+                                </div>
+
+                                {/* Card FRONT (Content - Hidden initially, revealed after flip) */}
                                 <div style={{
-                                    width: '100%', height: '100%',
-                                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'
+                                    position: 'absolute', inset: 0,
+                                    backgroundColor: '#fff',
+                                    backfaceVisibility: 'hidden',
+                                    // FIX: This must be 0deg so that (0+180 = 180) it faces AWAY initially
+                                    transform: 'rotateY(0deg)',
+                                    borderRadius: '2px',
+                                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                                    // Subtle border for definition
+                                    border: '1px solid rgba(0,0,0,0.1)',
+                                    boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
                                 }}>
-                                    {children ? children : (
-                                        <div style={{ padding: '2rem', textAlign: 'center' }}>
-                                            <span style={{ fontFamily: "'Playfair Display', serif", fontSize: '1.5rem', color: '#333' }}>Invitación</span>
-                                        </div>
-                                    )}
+                                    <div style={{
+                                        width: '100%', height: '100%',
+                                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'
+                                    }}>
+                                        {children ? children : (
+                                            <div style={{ padding: '2rem', textAlign: 'center' }}>
+                                                <span style={{ fontFamily: "'Playfair Display', serif", fontSize: '1.5rem', color: '#333' }}>Invitación</span>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    )}
 
 
                     {/* Side/Bottom Flaps (Pocket) */}
@@ -359,8 +392,9 @@ const Envelope: React.FC<EnvelopeProps> = ({
                         backgroundImage: `linear-gradient(to bottom, rgba(0,0,0,0.05), transparent 20%), ${texture}`,
                         transform: 'translateZ(10px)',
                         // Much sharper/darker drop shadow for clearer definition
-                        filter: 'contrast(1.05) drop-shadow(0 -2px 3px rgba(0,0,0,0.3))',
-                        backfaceVisibility: 'hidden'
+                        filter: 'contrast(1.1) drop-shadow(0 -4px 6px rgba(0,0,0,0.4))', // Increased contrast and shadow
+                        backfaceVisibility: 'hidden',
+                        borderTop: '1px solid rgba(0,0,0,0.15)' // Subtle border to define the edge
                     }}>
                         <div style={{
                             position: 'absolute', top: '38%', left: 0, right: 0, height: '1px',
@@ -381,8 +415,10 @@ const Envelope: React.FC<EnvelopeProps> = ({
                         transition: 'transform 0.9s cubic-bezier(0.4, 0, 0.2, 1)',
                         zIndex: 20,
                         // High contrast shadow for the main flap
-                        filter: `${isOpening ? 'brightness(0.95)' : 'brightness(1.02)'} drop-shadow(0 4px 6px rgba(0,0,0,0.4))`,
-                        backfaceVisibility: 'hidden'
+                        backfaceVisibility: 'hidden',
+                        // High contrast shadow for the main flap + border for definition
+                        filter: `${isOpening ? 'brightness(0.95)' : 'brightness(1.02)'} drop-shadow(0 6px 12px rgba(0,0,0,0.5))`,
+                        borderBottom: '1px solid rgba(0,0,0,0.15)' // Defined edge for the flap
                     }}>
                         <div style={shineStyle}></div>
 

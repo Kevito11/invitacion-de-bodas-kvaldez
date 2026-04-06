@@ -12,6 +12,8 @@ interface InvitationPreviewProps {
     isGuest?: boolean;
     guest?: any; // Personalized guest
     forceShowEnvelope?: boolean; // For editor preview
+    initialEnvelopeStep?: 'front' | 'flipping' | 'back' | 'opening' | 'extracting' | 'revealing' | 'done';
+    hideEnvelopeContent?: boolean; // New prop
     isMobilePreview?: boolean; // New prop to fix sizing in builder
     isThumbnail?: boolean; // New prop for dashboard preview
     onRSVP?: (status: 'confirmed' | 'declined', message?: string) => Promise<void>;
@@ -118,7 +120,7 @@ const BackgroundSlideshow = ({ images, activeIndex, fallbackColor, themeBackgrou
     );
 };
 
-const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, isGuest = false, guest, forceShowEnvelope = false, isMobilePreview = false, isThumbnail = false, onRSVP }) => {
+const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, isGuest = false, guest, forceShowEnvelope = false, initialEnvelopeStep, hideEnvelopeContent = false, isMobilePreview = false, isThumbnail = false, onRSVP }) => {
     const [scale, setScale] = useState(1);
     const layout = data.layout || 'scroll'; // Hoisted for effect dependencies
     const containerRef = useRef<HTMLDivElement>(null);
@@ -274,7 +276,13 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, isGuest = f
     const bodyFont = getFontFamily(data.design?.bodyFont || 'montserrat');
 
     // Calculate readable text color based on overlay or background
-    const effectiveBgColor = data.design?.backgroundColor || currentTheme.contentOverlay || currentTheme.bg || '#ffffff';
+    // Prefer overlayColor if opacity > 0.3, else background color
+    const overlayOpacity = data.design?.overlayOpacity ?? 0.85;
+    const overlayColor = data.design?.overlayColor || '#ffffff';
+
+    // If overlay is significant, use it as bg for contrast calc
+    const effectiveBgColor = overlayOpacity > 0.4 ? overlayColor : (data.design?.backgroundColor || currentTheme.bg || '#ffffff');
+
     const readableTextColor = getHighContrastColor(effectiveBgColor);
     const readableSubTextColor = readableTextColor === '#ffffff' ? '#e0e0e0' : '#555555'; // Slightly dimmer for subtext
 
@@ -289,9 +297,27 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, isGuest = f
     const handleZoomIn = () => setScale(prev => Math.min(prev + 0.1, 1.5));
     const handleZoomOut = () => setScale(prev => Math.max(prev - 0.1, 0.5));
 
-    const renderOverlayBackground = (opacity?: number) => {
-        if (!opacity && opacity !== 0) return currentTheme.contentOverlay || 'rgba(255,255,255,0.0)';
-        return `rgba(255,255,255,${opacity})`;
+    const renderOverlayBackground = (opacityOverride?: number) => {
+        const opacity = opacityOverride !== undefined ? opacityOverride : overlayOpacity;
+        if (opacity === 0) return 'transparent';
+
+        // Convert hex to rgba if needed, or just use the color and apply opacity via separate style if possible, 
+        // but here we return a string for background property.
+        // Simple hex to rgba conversion
+        let r = 255, g = 255, b = 255;
+        if (overlayColor.startsWith('#')) {
+            const hex = overlayColor.replace('#', '');
+            if (hex.length === 3) {
+                r = parseInt(hex[0] + hex[0], 16);
+                g = parseInt(hex[1] + hex[1], 16);
+                b = parseInt(hex[2] + hex[2], 16);
+            } else if (hex.length === 6) {
+                r = parseInt(hex.substring(0, 2), 16);
+                g = parseInt(hex.substring(2, 4), 16);
+                b = parseInt(hex.substring(4, 6), 16);
+            }
+        }
+        return `rgba(${r}, ${g}, ${b}, ${opacity})`;
     };
 
     // Formato de fecha elegante
@@ -457,7 +483,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, isGuest = f
             <div style={{
                 width: '100%', maxWidth: '600px', margin: '0 auto', padding: '0 1rem', boxSizing: 'border-box', textAlign: 'center',
                 ...(layout !== 'classic' ? {
-                    backgroundColor: currentTheme.contentOverlay || 'transparent',
+                    backgroundColor: renderOverlayBackground(),
                     borderRadius: '16px',
                     padding: '2rem 1rem',
                     marginTop: '2rem', // Spacing from top
@@ -567,7 +593,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, isGuest = f
                 <ScrollReveal animation={data.animationStyle}>
                     <div style={{
                         marginBottom: '2rem',
-                        background: currentTheme.contentOverlay || 'rgba(255,255,255,0.7)',
+                        background: renderOverlayBackground(),
                         padding: '2rem 1rem',
                         borderRadius: '24px',
                         backdropFilter: 'blur(10px)',
@@ -606,7 +632,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, isGuest = f
                 <ScrollReveal animation={data.animationStyle}>
                     <div style={{
                         padding: '2rem 1rem',
-                        background: currentTheme.contentOverlay || 'rgba(255,255,255,0.7)',
+                        background: renderOverlayBackground(),
                         borderRadius: '24px',
                         backdropFilter: 'blur(10px)',
                         boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.07)',
@@ -688,7 +714,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, isGuest = f
                     <ScrollReveal animation={data.animationStyle}>
                         <div style={{
                             padding: '2rem 1rem',
-                            background: currentTheme.contentOverlay || 'rgba(255,255,255,0.8)',
+                            background: renderOverlayBackground(),
                             borderRadius: '24px',
                             backdropFilter: 'blur(10px)',
                             boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.07)',
@@ -881,6 +907,8 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, isGuest = f
                             liner={data.envelope?.liner}
                             stamp={data.envelope?.stamp}
                             seal={data.envelope?.seal}
+                            initialStep={initialEnvelopeStep}
+                            hideContent={hideEnvelopeContent}
                         >
                             {coverContent}
                         </Envelope>

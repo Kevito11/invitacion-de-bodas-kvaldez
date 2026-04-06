@@ -4,7 +4,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useEvents } from '../context/EventsContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, Filter, X, Tag } from 'lucide-react';
+import { Calendar, Filter, X, Tag, Trash2 } from 'lucide-react';
 
 interface EventsTableProps {
     events?: any[]; // Optional prop to override internal data fetching
@@ -55,6 +55,9 @@ const EventsTable: React.FC<EventsTableProps> = ({ events: externalEvents }) => 
             originalData: ev,
             type: t('dashboard.table.event_type'),
             image: ev.imageUrl || null,
+            initials: (ev.partner1 && ev.partner2)
+                ? `${ev.partner1.charAt(0).toUpperCase()}&${ev.partner2.charAt(0).toUpperCase()}`
+                : (ev.title ? ev.title.charAt(0).toUpperCase() : '?'),
             created: new Date().toLocaleDateString(locale),
             eventDate: ev.date ? new Date(ev.date) : null,
             eventDateString: ev.date ? new Date(ev.date).toLocaleDateString(locale) : 'Por definir',
@@ -109,6 +112,18 @@ const EventsTable: React.FC<EventsTableProps> = ({ events: externalEvents }) => 
         if (window.confirm(`¿Estás seguro de que deseas eliminar ${selectedEvents.length} evento(s)? Esta acción no se puede deshacer.`)) {
             deleteEvents(selectedEvents);
             setSelectedEvents([]);
+        }
+    };
+
+    const handleDeleteSingle = (id: string, title: string) => {
+        if (!user?.username) return;
+
+        if (window.confirm(`¿Estás seguro de que deseas eliminar el evento "${title}"? Esta acción no se puede deshacer.`)) {
+            deleteEvents([id]);
+            // If the deleted event was selected, remove it from selection
+            if (selectedEvents.includes(id)) {
+                setSelectedEvents(prev => prev.filter(eventId => eventId !== id));
+            }
         }
     };
 
@@ -269,6 +284,7 @@ const EventsTable: React.FC<EventsTableProps> = ({ events: externalEvents }) => 
                             <th style={{ padding: '1rem', textAlign: 'left' }}>{t('dashboard.table.header.open_rate')}</th>
                             <th style={{ padding: '1rem', textAlign: 'left' }}>{t('dashboard.table.header.response_rate')}</th>
                             <th style={{ padding: '1rem', textAlign: 'left' }}>{t('dashboard.table.header.status')}</th>
+                            <th style={{ padding: '1rem', textAlign: 'center' }}>Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -286,14 +302,21 @@ const EventsTable: React.FC<EventsTableProps> = ({ events: externalEvents }) => 
                                         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                                             <div style={{
                                                 width: '60px', height: '60px',
-                                                backgroundColor: '#E5E7EB',
+                                                backgroundColor: ev.image ? '#E5E7EB' : (theme === 'dark' ? '#333' : '#F3F4F6'),
                                                 borderRadius: '4px',
                                                 backgroundImage: ev.image ? `url(${ev.image})` : 'none',
                                                 backgroundSize: 'cover',
                                                 backgroundPosition: 'center',
-                                                display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                fontSize: '1.4rem',
+                                                fontFamily: "'Playfair Display', serif",
+                                                color: theme === 'dark' ? '#E6BEAE' : '#D4A373',
+                                                fontWeight: 700,
+                                                border: `1px solid ${colors.border}`
                                             }}>
-                                                {!ev.image && <Calendar size={20} color="#9CA3AF" />}
+                                                {!ev.image && (
+                                                    ev.initials ? ev.initials : <Calendar size={20} color="#9CA3AF" />
+                                                )}
                                             </div>
                                             <div>
                                                 <div
@@ -391,6 +414,31 @@ const EventsTable: React.FC<EventsTableProps> = ({ events: externalEvents }) => 
                                         ) : (
                                             <span style={{ backgroundColor: theme === 'dark' ? 'rgba(239, 68, 68, 0.2)' : '#FEE2E2', color: '#EF4444', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 600 }}>{t('dashboard.table.status.trial')}</span>
                                         )}
+                                    </td>
+                                    <td style={{ padding: '1rem', textAlign: 'center' }}>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleDeleteSingle(ev.id, ev.title);
+                                            }}
+                                            style={{
+                                                background: 'none',
+                                                border: 'none',
+                                                cursor: 'pointer',
+                                                color: '#EF4444',
+                                                padding: '0.4rem',
+                                                borderRadius: '4px',
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                transition: 'background-color 0.2s'
+                                            }}
+                                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'dark' ? 'rgba(239, 68, 68, 0.1)' : '#FEE2E2'}
+                                            onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                            title="Eliminar evento"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
                                     </td>
                                 </tr>
                             ))
