@@ -1,12 +1,14 @@
 import React from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { useEvents } from '../context/EventsContext';
+import { useTheme } from '../context/ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import { Users, ArrowRight } from 'lucide-react';
 
 const GuestsPage: React.FC = () => {
     const { t } = useLanguage();
     const { events } = useEvents();
+    const { colors, theme } = useTheme();
     const navigate = useNavigate();
 
     return (
@@ -16,8 +18,8 @@ const GuestsPage: React.FC = () => {
                     <Users size={24} />
                 </div>
                 <div>
-                    <h1 style={{ margin: 0, fontSize: '1.5rem', color: '#1F2937' }}>{t('nav.guests')}</h1>
-                    <p style={{ margin: '0.2rem 0 0', color: '#6B7280' }}>Selecciona un evento para gestionar sus invitados.</p>
+                    <h1 style={{ margin: 0, fontSize: '1.5rem', color: colors.text }}>{t('nav.guests')}</h1>
+                    <p style={{ margin: '0.2rem 0 0', color: colors.muted }}>Selecciona un evento para gestionar sus invitados.</p>
                 </div>
             </div>
 
@@ -27,10 +29,10 @@ const GuestsPage: React.FC = () => {
                         key={event.id}
                         onClick={() => navigate(`/dashboard/event/${event.id}`)}
                         style={{
-                            backgroundColor: 'white',
+                            backgroundColor: colors.cardBg,
                             padding: '1.5rem',
                             borderRadius: '12px',
-                            border: '1px solid #E5E7EB',
+                            border: `1px solid ${colors.border}`,
                             cursor: 'pointer',
                             transition: 'transform 0.2s, box-shadow 0.2s',
                             display: 'flex',
@@ -47,10 +49,10 @@ const GuestsPage: React.FC = () => {
                         }}
                     >
                         <div>
-                            <h3 style={{ margin: '0 0 0.5rem', fontSize: '1.1rem', color: '#374151' }}>
+                            <h3 style={{ margin: '0 0 0.5rem', fontSize: '1.1rem', color: colors.text }}>
                                 {event.partner1} & {event.partner2}
                             </h3>
-                            <div style={{ fontSize: '0.9rem', color: '#6B7280' }}>
+                            <div style={{ fontSize: '0.9rem', color: colors.muted }}>
                                 {event.date || 'Fecha pendiente'}
                             </div>
                             <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#6366F1', fontWeight: 500 }}>

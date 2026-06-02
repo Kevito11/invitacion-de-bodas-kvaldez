@@ -6,8 +6,6 @@ interface LanguageContextType {
     language: Language;
     toggleLanguage: () => void;
     t: (key: string) => string;
-    isMobileSimulation: boolean;
-    toggleMobileSimulation: () => void;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
@@ -29,8 +27,7 @@ export const translations: Record<Language, Record<string, string>> = {
         'nav.new_event': 'NUEVO EVENTO',
         'nav.new': 'NUEVO', // Added alias
         'nav.logout': 'Cerrar Sesión',
-        'nav.mobile_version': 'VERSIÓN MÓVIL',
-        'nav.desktop_version': 'VERSIÓN ESCRITORIO',
+
         'nav.language': 'IDIOMA',
         'nav.my_events': 'MIS EVENTOS', // Added alias
         'nav.no_events': 'No tienes eventos aún', // Added
@@ -234,8 +231,7 @@ export const translations: Record<Language, Record<string, string>> = {
         'footer.mode_night': 'Modo Noche',
         'footer.lang_es': 'ESPAÑOL',
         'footer.lang_en': 'ENGLISH',
-        'footer.mobile_version': 'VERSIÓN MÓVIL',
-        'footer.desktop_version': 'VERSIÓN ESCRITORIO',
+
         'footer.logout': 'Cerrar Sesión',
     },
     en: {
@@ -254,8 +250,7 @@ export const translations: Record<Language, Record<string, string>> = {
         'nav.new_event': 'NEW EVENT',
         'nav.new': 'NEW', // Added alias
         'nav.logout': 'Log Out',
-        'nav.mobile_version': 'MOBILE VERSION',
-        'nav.desktop_version': 'DESKTOP VERSION',
+
         'nav.language': 'LANGUAGE',
         'nav.my_events': 'MY EVENTS', // Added alias
         'nav.no_events': 'No events yet', // Added
@@ -457,22 +452,16 @@ export const translations: Record<Language, Record<string, string>> = {
         'footer.mode_night': 'Night Mode',
         'footer.lang_es': 'ESPAÑOL',
         'footer.lang_en': 'ENGLISH',
-        'footer.mobile_version': 'MOBILE VERSION',
-        'footer.desktop_version': 'DESKTOP VERSION',
+
         'footer.logout': 'Log Out',
     }
 };
 
 export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [language, setLanguage] = useState<Language>('es');
-    const [isMobileSimulation, setIsMobileSimulation] = useState(false);
 
     const toggleLanguage = () => {
         setLanguage(prev => prev === 'es' ? 'en' : 'es');
-    };
-
-    const toggleMobileSimulation = () => {
-        setIsMobileSimulation(prev => !prev);
     };
 
     const t = (key: string) => {
@@ -480,7 +469,7 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
     };
 
     return (
-        <LanguageContext.Provider value={{ language, toggleLanguage, t, isMobileSimulation, toggleMobileSimulation }}>
+        <LanguageContext.Provider value={{ language, toggleLanguage, t }}>
             {children}
         </LanguageContext.Provider>
     );

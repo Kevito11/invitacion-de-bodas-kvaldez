@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useEvents } from '../context/EventsContext';
 import {
     User,
-    Inbox, Globe, Smartphone, LogOut, ChevronDown, Plus, Moon, Sun, Settings, LayoutDashboard, Search,
+    Inbox, Globe, LogOut, ChevronDown, Plus, Moon, Sun, Settings, LayoutDashboard, Search,
     MessageSquare, Users, HelpCircle, Pin, PinOff
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
@@ -27,7 +27,7 @@ const PlatformSidebar: React.FC<PlatformSidebarProps> = ({
 }) => {
     const { user, logout } = useAuth();
     const { colors, theme, toggleTheme } = useTheme();
-    const { t, language, toggleLanguage, isMobileSimulation, toggleMobileSimulation } = useLanguage();
+    const { t, language, toggleLanguage } = useLanguage();
     const navigate = useNavigate();
     const location = useLocation();
     const { events } = useEvents();
@@ -63,10 +63,6 @@ const PlatformSidebar: React.FC<PlatformSidebarProps> = ({
 
     const handleNavigation = (path: string) => {
         navigate(path);
-        // If on desktop, collapse the sidebar after navigation
-        if (!isMobile && setIsCollapsed) {
-            setIsCollapsed(true);
-        }
         // If on mobile, close the sidebar
         if (isMobile && onClose) {
             onClose();
@@ -76,7 +72,6 @@ const PlatformSidebar: React.FC<PlatformSidebarProps> = ({
     const isActive = (path: string) => location.pathname === path;
 
     const navItems: any[] = [
-        { label: t('nav.explore'), icon: <Search size={24} />, path: '/explore' },
         { label: t('nav.messages'), icon: <MessageSquare size={24} />, path: '/messages' },
         { label: t('nav.directory'), icon: <Globe size={24} />, path: '/directory' },
         { label: t('nav.received'), icon: <Inbox size={24} />, path: '/received' },
@@ -423,14 +418,6 @@ const PlatformSidebar: React.FC<PlatformSidebarProps> = ({
                     )}
                 </div>
 
-                <div
-                    onClick={toggleMobileSimulation}
-                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', opacity: 0.9, color: isMobileSimulation ? colors.primary : colors.text }}
-                    title={isMobileSimulation ? t('footer.desktop_version') : t('footer.mobile_version')}
-                >
-                    <Smartphone size={20} />
-                    {showText && (isMobileSimulation ? t('footer.desktop_version') : t('footer.mobile_version'))}
-                </div>
 
                 <div
                     onClick={handleLogout}

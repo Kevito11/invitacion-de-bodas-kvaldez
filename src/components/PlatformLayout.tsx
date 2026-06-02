@@ -7,8 +7,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 
 const PlatformLayout: React.FC = () => {
-    const { colors, theme } = useTheme(); // Added theme
-    const { isMobileSimulation } = useLanguage();
+    const { colors } = useTheme();
     const [isMobile, setIsMobile] = React.useState(window.innerWidth < 1024);
     const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(true);
@@ -49,42 +48,12 @@ const PlatformLayout: React.FC = () => {
                 position: 'relative',
                 display: 'flex',
                 flexDirection: 'column',
-                alignItems: isMobileSimulation ? 'center' : 'stretch',
-                padding: isMobileSimulation ? '2rem' : '0',
-                backgroundColor: isMobileSimulation ? (theme === 'dark' ? '#111' : '#f0f2f5') : colors.bg,
+                alignItems: 'stretch',
+                padding: '0',
+                backgroundColor: colors.bg,
                 transition: 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)'
             }}>
-                {isMobileSimulation ? (
-                    <div style={{
-                        width: '375px',
-                        height: '812px', // iPhone X height roughly, or just min-height
-                        minHeight: '100%',
-                        backgroundColor: colors.bg,
-                        borderRadius: '40px',
-                        border: `8px solid ${theme === 'dark' ? '#333' : '#fff'}`,
-                        boxShadow: '0 0 0 2px #ccc, 0 20px 40px rgba(0,0,0,0.2)',
-                        overflow: 'hidden',
-                        position: 'relative',
-                        display: 'flex',
-                        flexDirection: 'column'
-                    }}>
-                        {/* Mobile Status Bar Simulation (Optional) */}
-                        <div style={{ height: '30px', width: '100%', backgroundColor: colors.cardBg, zIndex: 10, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                            <div style={{ width: '100px', height: '15px', backgroundColor: theme === 'dark' ? '#000' : '#ddd', borderRadius: '0 0 10px 10px' }}></div>
-                        </div>
-
-                        <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', paddingBottom: '65px' }}>
-                            <Outlet />
-                        </div>
-
-                        <MobileNavBar
-                            toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-                            style={{ position: 'absolute' }}
-                        />
-                    </div>
-                ) : (
-                    <Outlet />
-                )}
+                <Outlet />
             </main>
 
             {/* Mobile Bottom Navigation */}

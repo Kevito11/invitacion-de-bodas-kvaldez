@@ -1,12 +1,14 @@
 import React, { useMemo } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { useEvents } from '../context/EventsContext';
+import { useTheme } from '../context/ThemeContext';
 import { MessageSquare, User, CheckCircle, XCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const Messages: React.FC = () => {
     const { t } = useLanguage();
     const { events } = useEvents();
+    const { colors, theme } = useTheme();
     const navigate = useNavigate();
 
     // Aggregate messages from all guests in all events
@@ -54,8 +56,8 @@ const Messages: React.FC = () => {
                     <MessageSquare size={24} />
                 </div>
                 <div>
-                    <h1 style={{ margin: 0, fontSize: '1.5rem', color: '#1F2937' }}>{t('nav.messages')}</h1>
-                    <p style={{ margin: '0.2rem 0 0', color: '#6B7280' }}>
+                    <h1 style={{ margin: 0, fontSize: '1.5rem', color: colors.text }}>{t('nav.messages')}</h1>
+                    <p style={{ margin: '0.2rem 0 0', color: colors.muted }}>
                         Mensajes recibidos de tus invitados al confirmar asistencia.
                     </p>
                 </div>
@@ -65,14 +67,14 @@ const Messages: React.FC = () => {
                 <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}>
                     {allMessages.map((msg, idx) => (
                         <div key={`${msg.id}-${idx}`} style={{
-                            backgroundColor: 'white',
+                            backgroundColor: colors.cardBg,
                             borderRadius: '12px',
-                            border: '1px solid #E5E7EB',
+                            border: `1px solid ${colors.border}`,
                             padding: '1.5rem',
                             display: 'flex',
                             flexDirection: 'column',
                             gap: '1rem',
-                            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)'
+                            boxShadow: theme === 'dark' ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' : '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
                         }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -80,8 +82,8 @@ const Messages: React.FC = () => {
                                         <User size={16} />
                                     </div>
                                     <div>
-                                        <div style={{ fontWeight: 600, color: '#111827', fontSize: '0.95rem' }}>{msg.guestName}</div>
-                                        <div style={{ fontSize: '0.8rem', color: '#6B7280' }}>{msg.eventName}</div>
+                                        <div style={{ fontWeight: 600, color: colors.text, fontSize: '0.95rem' }}>{msg.guestName}</div>
+                                        <div style={{ fontSize: '0.8rem', color: colors.muted }}>{msg.eventName}</div>
                                     </div>
                                 </div>
                                 <div title={msg.status === 'confirmed' ? 'Asistirá' : (msg.status === 'declined' ? 'No asistirá' : 'Pendiente')}>
@@ -93,11 +95,11 @@ const Messages: React.FC = () => {
 
                             <div style={{
                                 flex: 1,
-                                backgroundColor: '#F9FAFB',
+                                backgroundColor: theme === 'dark' ? 'rgba(255,255,255,0.05)' : '#F9FAFB',
                                 borderRadius: '8px',
                                 padding: '1rem',
                                 fontSize: '0.9rem',
-                                color: '#374151',
+                                color: colors.text,
                                 fontStyle: 'italic',
                                 position: 'relative'
                             }}>
